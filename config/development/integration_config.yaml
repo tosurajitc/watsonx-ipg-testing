@@ -1,0 +1,119 @@
+# Development Integration Configuration
+
+# JIRA configuration
+jira:
+  url: https://jira-dev.example.com
+  api_version: 2
+  project_keys:
+    - IPG
+    - WATSONX
+  issue_types:
+    - User Story
+    - Bug
+    - Task
+  custom_fields:
+    test_case_id: customfield_10001
+    test_case_priority: customfield_10002
+    test_case_status: customfield_10003
+  timeout: 30
+  max_results: 100
+  webhook_enabled: true
+
+# SharePoint configuration
+sharepoint:
+  url: https://company-dev.sharepoint.com
+  site_name: IPG-Testing-Dev
+  document_libraries:
+    test_cases: "Test Cases"
+    test_reports: "Test Reports"
+    defect_reports: "Defect Reports"
+  default_permissions: "Read"
+  timeout: 45
+  retry_attempts: 3
+  batch_size: 20
+
+# ALM configuration
+alm:
+  url: https://alm-dev.example.com
+  domain: DEFAULT
+  project: IPG_TESTING
+  test_folders:
+    manual: "Root/Manual Tests"
+    automated: "Root/Automated Tests"
+  defect_tracking:
+    enabled: true
+    default_severity: 3
+    default_priority: Medium
+  timeout: 30
+  max_results: 100
+
+# RPA (Automation Anywhere) configuration
+rpa:
+  control_room_url: https://aa-dev.example.com
+  api_version: 11
+  bot_runners:
+    - RUNNER-DEV-01
+    - RUNNER-DEV-02
+  queue_names:
+    - IPG_TEST_QUEUE_DEV
+  workload_timeout: 120
+  retry_attempts: 2
+  schedules:
+    enabled: true
+    default_schedule: "workdays_8am"
+
+# UFT configuration
+uft:
+  installation_path: "C:\\Program Files (x86)\\Micro Focus\\Unified Functional Testing\\bin"
+  repository_path: "D:\\UFT_Repositories\\Dev"
+  result_location: "D:\\UFT_Results\\Dev"
+  default_timeout: 60
+  object_identification_settings:
+    smart_identification: true
+    ordinal_identifier: true
+  run_settings:
+    run_visible: true
+    record_results: true
+
+# Email notification service
+email:
+  smtp_server: smtp-dev.example.com
+  smtp_port: 587
+  use_tls: true
+  from_address: watsonx-ipg-testing-dev@example.com
+  admin_emails:
+    - surajit.chatterjee@in.ibm.com
+  notification_groups:
+    qa_team:
+      - surajit.chatterjee@in.ibm.com
+    dev_team:
+      - swatagga@in.ibm.com
+    management:
+      - surajit.chatterjee@in.ibm.com
+
+# Test data management
+test_data:
+  storage_location: "D:\\TestData\\Dev"
+  database_connection_string: "sqlite:///D:\\TestData\\Dev\\test_data.db"
+  auto_generate: true
+  refresh_frequency: daily
+  sensitive_data_handling: masked
+
+# Rule engine for test case assignment
+assignment_rules:
+  default_owner: "surajit.chatterjee@in.ibm.com"
+  rules:
+    - condition: "priority == 'High'"
+      assignee: "surajit.chatterjee@in.ibm.com"
+    - condition: "component == 'Backend'"
+      assignee: "swatagga@in.ibm.com"
+    - condition: "component == 'Frontend'"
+      assignee: "surajit.chatterjee@in.ibm.com"
+
+# API keys and tokens (placeholders - actual values should be in environment variables)
+api_keys:
+  jira: ${JIRA_API_KEY}
+  sharepoint: ${SHAREPOINT_API_KEY}
+  alm: ${ALM_API_KEY}
+  watsonx: ${WATSONX_API_KEY}
+  rpa: ${RPA_API_KEY}
