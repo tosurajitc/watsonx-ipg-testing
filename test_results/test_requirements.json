@@ -1,0 +1,58 @@
+{
+  "document_type": "text",
+  "raw_text": "\nUser Story ID: IPG-157\nTitle: Customer Authentication with Multi-Factor Authentication\nPriority: High\n\nAs a mobile banking user\nI want to be able to authenticate using multiple factors (password and mobile OTP)\nSo that my banking transactions are more secure\n\nAcceptance Criteria:\n1. Users should be able to log in with their username and password\n2. Upon successful password verification, the system should send an OTP to the registered mobile number\n3. The OTP should be 6 digits and valid for 3 minutes\n4. Users should be able to enter the OTP to complete authentication\n5. After 3 failed OTP attempts, the account should be temporarily locked for 30 minutes\n6. Users should be able to request a new OTP if the original expires\n7. System should maintain an audit log of all authentication attempts (successful and failed)\n",
+  "requirements": [
+    {
+      "id": "1.",
+      "text": "Users should be able to log in with their username and password",
+      "type": "non-functional"
+    },
+    {
+      "id": "2.",
+      "text": "Upon successful password verification, the system should send an OTP to the registered mobile number",
+      "type": "functional"
+    },
+    {
+      "id": "3.",
+      "text": "The OTP should be 6 digits and valid for 3 minutes",
+      "type": "functional"
+    },
+    {
+      "id": "4.",
+      "text": "Users should be able to enter the OTP to complete authentication",
+      "type": "functional"
+    },
+    {
+      "id": "5.",
+      "text": "After 3 failed OTP attempts, the account should be temporarily locked for 30 minutes",
+      "type": "functional"
+    },
+    {
+      "id": "6.",
+      "text": "Users should be able to request a new OTP if the original expires",
+      "type": "functional"
+    },
+    {
+      "id": "7.",
+      "text": "System should maintain an audit log of all authentication attempts (successful and failed)",
+      "type": "non-functional"
+    }
+  ],
+  "user_stories": [
+    {
+      "role": "mobile banking user",
+      "goal": "to be able",
+      "benefit": "authenticate using multiple factors (password and mobile OTP)\nSo that my banking transactions are more secure",
+      "full_text": "As a mobile banking user\nI want to be able to authenticate using multiple factors (password and mobile OTP)\nSo that my banking transactions are more secure"
+    }
+  ],
+  "acceptance_criteria": [
+    "Users should be able to log in with their username and password",
+    "Upon successful password verification, the system should send an OTP to the registered mobile number",
+    "The OTP should be 6 digits and valid for 3 minutes",
+    "Users should be able to enter the OTP to complete authentication",
+    "After 3 failed OTP attempts, the account should be temporarily locked for 30 minutes",
+    "Users should be able to request a new OTP if the original expires",
+    "System should maintain an audit log of all authentication attempts (successful and failed)"
+  ]
+}

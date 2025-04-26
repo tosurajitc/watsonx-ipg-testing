@@ -1,0 +1,49 @@
+{
+  "scenarios": [
+    {
+      "id": "TS-001-01",
+      "title": "Successful Login with Password and OTP",
+      "description": "Verify that a user can successfully log in to the mobile banking application using their username, password, and a valid OTP sent to their registered mobile number. This test scenario will cover the happy path of the multi-factor authentication process. The test will involve:  Entering a valid username and password  Verifying that an OTP is sent to the registered mobile number  Entering the valid OTP within the 3-minute validity period  Verifying that the user is successfully logged in to the application  Verifying that an audit log entry is created for the successful authentication attempt Test Scenario 2: OTP Expiry and Resend",
+      "related_requirements": "1, 2, 3, 4",
+      "priority": "High",
+      "generation_timestamp": "2025-04-26T10:43:03.111105",
+      "coverage": {
+        "requirements_covered": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "coverage_percentage": 57.14285714285714
+      },
+      "test_type": "security"
+    },
+    {
+      "id": "TS-003-02",
+      "title": "OTP Expiry and Resend",
+      "description": "Verify that a user can request a new OTP if the original expires, and that the new OTP can be used to complete authentication. This test scenario will cover the edge case of OTP expiry and resend. The test will involve:  Entering a valid username and password  Verifying that an OTP is sent to the registered mobile number  Waiting for the OTP to expire (3 minutes)  Requesting a new OTP  Verifying that a new OTP is sent to the registered mobile number  Entering the new OTP to complete authentication  Verifying that the user is successfully logged in to the application  Verifying that an audit log entry is created for the successful authentication attempt",
+      "related_requirements": "3, 6",
+      "priority": "Medium",
+      "generation_timestamp": "2025-04-26T10:43:03.111105",
+      "coverage": {
+        "requirements_covered": [
+          "3",
+          "6"
+        ],
+        "coverage_percentage": 28.57142857142857
+      },
+      "test_type": "security"
+    }
+  ],
+  "metadata": {
+    "num_requested": 2,
+    "num_generated": 2,
+    "detail_level": "medium",
+    "requirements_source": "text",
+    "model_used": "llama3-70b-8192",
+    "elapsed_time": 1.3398120403289795,
+    "priority_focus": null,
+    "custom_focus": null
+  },
+  "raw_llm_response": "Here are two test scenarios with a medium level of detail based on the provided requirements:\n\n**Test Scenario 1: Successful Multi-Factor Authentication**\n\nTest Scenario ID: TS-001-01\nTitle: Successful Login with Password and OTP\nDescription: Verify that a user can successfully log in to the mobile banking application using their username, password, and a valid OTP sent to their registered mobile number.\nRelated Requirements: 1, 2, 3, 4\nPriority: High\n\nThis test scenario will cover the happy path of the multi-factor authentication process. The test will involve:\n\n* Entering a valid username and password\n* Verifying that an OTP is sent to the registered mobile number\n* Entering the valid OTP within the 3-minute validity period\n* Verifying that the user is successfully logged in to the application\n* Verifying that an audit log entry is created for the successful authentication attempt\n\n**Test Scenario 2: OTP Expiry and Resend**\n\nTest Scenario ID: TS-003-02\nTitle: OTP Expiry and Resend\nDescription: Verify that a user can request a new OTP if the original expires, and that the new OTP can be used to complete authentication.\nRelated Requirements: 3, 6\nPriority: Medium\n\nThis test scenario will cover the edge case of OTP expiry and resend. The test will involve:\n\n* Entering a valid username and password\n* Verifying that an OTP is sent to the registered mobile number\n* Waiting for the OTP to expire (3 minutes)\n* Requesting a new OTP\n* Verifying that a new OTP is sent to the registered mobile number\n* Entering the new OTP to complete authentication\n* Verifying that the user is successfully logged in to the application\n* Verifying that an audit log entry is created for the successful authentication attempt"
+}
