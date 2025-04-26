@@ -1,0 +1,35 @@
+# LLM Service Configuration
+# Which LLM service to use: "groq" or "watsonx"
+LLM_SERVICE=groq
+
+# General LLM parameters 
+LLM_TEMPERATURE=0.2
+LLM_MAX_TOKENS=8000
+LLM_TOP_P=0.8
+
+# GROQ Configuration
+GROQ_API_KEY=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
+GROQ_API_BASE=https://api.groq.com/openai/v1
+GROQ_MODEL=llama3-70b-8192
+# Other GROQ model options:
+# - llama3-8b-8192
+# - mixtral-8x7b-32768
+# - gemma-7b-it
+
+# IBM watsonx Configuration
+WATSONX_API_KEY=your_watsonx_api_key_here
+WATSONX_URL=https://us-south.ml.cloud.ibm.com
+WATSONX_PROJECT_ID=your_watsonx_project_id_here
+WATSONX_MODEL=ibm/granite-13b-chat-v2
+# Other watsonx model options:
+# - ibm/granite-20b-instruct-v1
+# - ibm/mpt-7b-instruct2
+
+# Logging Configuration
+LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+# API Service Configuration
+API_HOST=0.0.0.0
+API_PORT=8000
+API_DEBUG=False
+API_WORKERS=4
