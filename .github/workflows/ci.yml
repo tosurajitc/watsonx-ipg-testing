@@ -11,45 +11,65 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.9, '3.10', '3.11']
+        include:
+          - python-version: 3.9
+            os: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4  # Updated to latest version
+    
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5  # Updated to latest version
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip'  # Caching pip dependencies
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install flake8 pytest coverage
+        if [ -f requirements/base.txt ]; then pip install -r requirements/base.txt; fi
         if [ -f requirements/dev.txt ]; then pip install -r requirements/dev.txt; fi
         if [ -f requirements/test.txt ]; then pip install -r requirements/test.txt; fi
     
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     
     - name: Run unit tests
       run: |
         mkdir -p test-reports
-        pytest tests/unit/ --junitxml=test-reports/unit-test-results.xml
+        pytest tests/unit/ --junitxml=test-reports/unit-test-results-${{ matrix.python-version }}.xml
         coverage run -m pytest tests/unit/
-        coverage xml -o test-reports/coverage.xml
+        coverage xml -o test-reports/coverage-${{ matrix.python-version }}.xml
     
     - name: Run integration tests
       run: |
-        mkdir -p test-reports
-        pytest tests/integration/ --junitxml=test-reports/integration-test-results.xml
+        pytest tests/integration/ --junitxml=test-reports/integration-test-results-${{ matrix.python-version }}.xml
     
     - name: Upload Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # Updated to latest version
       if: always()  # Ensures artifacts are uploaded even if tests fail
       with:
         name: test-reports-${{ matrix.python-version }}
         path: |
           test-reports/
         retention-days: 5
+        overwrite: true  # Allow overwriting existing artifacts
+
+    # Optional: Add code coverage reporting
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      if: success()  # Only upload if tests pass
+      with:
+        files: ./test-reports/coverage-${{ matrix.python-version }}.xml
+        env_vars: PYTHON_VERSION
+        name: codecov-${{ matrix.python-version }}
+        fail_ci_if_error: false
+        path_to_write_report: ./coverage/codecov_report.txt
+        verbose: true

@@ -15,4 +15,4 @@ git commit -m "Initial project setup with CI/CD configuration"
 git remote add origin https://github.com/tosurajitc/watsonx-ipg-testing.git
 
 # Push your code to GitHub
-git push -u origin main
+git push -u origin develop
