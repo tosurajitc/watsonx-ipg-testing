@@ -1,0 +1,43 @@
+{
+  "valid": true,
+  "scenarios": [
+    {
+      "id": "TS-001-01",
+      "valid": true,
+      "issues": [
+        "Description lacks key testability aspects: preconditions, expected results, clear steps"
+      ],
+      "warnings": [],
+      "metrics": {
+        "completeness_score": 0.8,
+        "testability_score": 0.8,
+        "coverage_score": 0.5,
+        "quality_score": 0.74
+      }
+    },
+    {
+      "id": "TS-003-02",
+      "valid": true,
+      "issues": [
+        "Description lacks key testability aspects: preconditions, expected results, clear steps"
+      ],
+      "warnings": [],
+      "metrics": {
+        "completeness_score": 0.8,
+        "testability_score": 0.8,
+        "coverage_score": 0.5,
+        "quality_score": 0.74
+      }
+    }
+  ],
+  "metrics": {
+    "total_scenarios": 2,
+    "valid_scenarios": 2,
+    "invalid_scenarios": 0,
+    "issues_found": 0,
+    "completeness_score": 0.8,
+    "testability_score": 0.8,
+    "coverage_score": 0.5,
+    "overall_quality_score": 0.76
+  }
+}
