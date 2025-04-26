@@ -1,0 +1,110 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]  # Deploy on version tags
+  workflow_dispatch:  # Allows manual triggering with approval
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements/base.txt ]; then pip install -r requirements/base.txt; fi
+        if [ -f requirements/test.txt ]; then pip install -r requirements/test.txt; fi
+    
+    - name: Run all tests
+      run: |
+        pytest tests/unit/ tests/integration/
+        
+  deploy-prod:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production  # This will require approval if configured in GitHub
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements/base.txt ]; then pip install -r requirements/base.txt; fi
+        if [ -f requirements/prod.txt ]; then pip install -r requirements/prod.txt; fi
+    
+    - name: Build and package application
+      run: |
+        python setup.py sdist bdist_wheel
+    
+    - name: Set up configuration for production
+      run: |
+        cp config/production/* config/default/
+    
+    - name: Deploy to production server
+      run: |
+        # Install SSH key
+        echo "${{ secrets.PROD_SSH_PRIVATE_KEY }}" > deploy_key
+        chmod 600 deploy_key
+        
+        # Deploy using rsync over SSH
+        rsync -avz --delete -e "ssh -i deploy_key -o StrictHostKeyChecking=no" dist/ ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }}:${{ secrets.PROD_APP_PATH }}
+        
+        # Run deployment script on remote server
+        ssh -i deploy_key -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} "cd ${{ secrets.PROD_APP_PATH }} && ./deployment/scripts/deploy.sh"
+        
+        # Clean up
+        rm deploy_key
+    
+    - name: Run smoke tests
+      run: |
+        # Wait a bit for the service to start
+        sleep 60
+        # Run basic smoke tests to verify deployment
+        curl -sSf ${{ secrets.PROD_HEALTH_CHECK_URL }} || exit 1
+    
+    - name: Send deployment notification
+      if: always()
+      run: |
+        # Send notification about the deployment status
+        # This could be an email, Slack message, etc.
+        echo "Deployment to production environment completed with status: ${{ job.status }}"
+        
+  rollback:
+    needs: deploy-prod
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Rollback to previous version
+      run: |
+        # Install SSH key
+        echo "${{ secrets.PROD_SSH_PRIVATE_KEY }}" > deploy_key
+        chmod 600 deploy_key
+        
+        # Execute rollback script on server
+        ssh -i deploy_key -o StrictHostKeyChecking=no ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} "cd ${{ secrets.PROD_APP_PATH }} && ./deployment/scripts/rollback.sh"
+        
+        # Clean up
+        rm deploy_key
+        
+    - name: Send rollback notification
+      run: |
+        echo "Production deployment failed, rollback executed with status: ${{ job.status }}"

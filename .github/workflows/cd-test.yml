@@ -1,0 +1,68 @@
+name: Deploy to Test
+
+on:
+  push:
+    branches: [ release/* ]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  deploy-test:
+    runs-on: ubuntu-latest
+    environment: test
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements/base.txt ]; then pip install -r requirements/base.txt; fi
+        if [ -f requirements/test.txt ]; then pip install -r requirements/test.txt; fi
+    
+    - name: Run unit and integration tests
+      run: |
+        pytest tests/unit/ tests/integration/
+    
+    - name: Build and package application
+      run: |
+        python setup.py sdist bdist_wheel
+    
+    - name: Set up configuration for test environment
+      run: |
+        cp config/test/* config/default/
+    
+    - name: Deploy to test server
+      run: |
+        # This is where you would deploy your application to your test server
+        # Example using SSH to deploy to a server
+        # Install SSH key
+        echo "${{ secrets.TEST_SSH_PRIVATE_KEY }}" > deploy_key
+        chmod 600 deploy_key
+        
+        # Deploy using rsync over SSH
+        rsync -avz --delete -e "ssh -i deploy_key -o StrictHostKeyChecking=no" dist/ ${{ secrets.TEST_SSH_USER }}@${{ secrets.TEST_SSH_HOST }}:${{ secrets.TEST_APP_PATH }}
+        
+        # Run deployment script on remote server
+        ssh -i deploy_key -o StrictHostKeyChecking=no ${{ secrets.TEST_SSH_USER }}@${{ secrets.TEST_SSH_HOST }} "cd ${{ secrets.TEST_APP_PATH }} && ./deployment/scripts/deploy.sh"
+        
+        # Clean up
+        rm deploy_key
+    
+    - name: Run post-deployment tests
+      run: |
+        # Wait a bit for the service to start
+        sleep 30
+        # Run end-to-end tests against the deployed service
+        pytest tests/e2e/
+    
+    - name: Send deployment notification
+      if: always()
+      run: |
+        # Send notification about the deployment status
+        # This could be an email, Slack message, etc.
+        echo "Deployment to test environment completed with status: ${{ job.status }}"

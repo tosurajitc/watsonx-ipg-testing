@@ -1,0 +1,7 @@
+# Primary owner with full privileges for all code in the repository
+* @tosurajitc
+
+# Critical components that require review by the primary owner
+/.github/workflows/ @tosurajitc
+/config/ @tosurajitc
+/deployment/ @tosurajitc
