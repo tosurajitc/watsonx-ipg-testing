@@ -1,3 +1,7 @@
+python -m venv venv
+venv\Scripts\activate
+
+
 # Initialize Git if not already done
 git init
 
@@ -8,7 +12,7 @@ git add .
 git commit -m "Initial project setup with CI/CD configuration"
 
 # Add the GitHub repository as a remote
-git remote add origin https://github.com/yourusername/watsonx-ipg-testing.git
+git remote add origin https://github.com/tosurajitc/watsonx-ipg-testing.git
 
 # Push your code to GitHub
 git push -u origin main
