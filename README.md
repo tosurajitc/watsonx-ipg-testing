@@ -74,6 +74,8 @@ pip install -r requirements/dev.txt
 
 ## Development
 
+# Validated CI/CD Pipeline Setup
+
 ### Running Tests
 
 ```bash
