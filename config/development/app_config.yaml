@@ -1,0 +1,70 @@
+# Development Environment Configuration
+
+# Application settings
+application:
+  name: watsonx-ipg-testing
+  version: 0.1.0
+  environment: development
+  debug: true
+  host: 0.0.0.0
+  port: 8080
+
+# Database configuration
+database:
+  type: sqlite  # For development, can be changed to mysql/postgresql in production
+  connection_string: sqlite:///dev_database.db
+  pool_size: 5
+  timeout: 30
+
+# WatsonX configuration
+watsonx:
+  api_endpoint: https://api.dev.watsonx.ibm.com/v1
+  model: watsonx-agentic-test
+  temperature: 0.7
+  max_tokens: 4096
+  timeout: 60
+
+# Service timeouts (in seconds)
+timeouts:
+  jira: 30
+  sharepoint: 45
+  alm: 30
+  rpa: 120
+
+# Feature flags
+features:
+  enable_llm_test_scenario_generator: true
+  enable_uft_code_generator: true
+  enable_error_processor: true
+  enable_metrics_service: true
+
+# UI settings
+ui:
+  theme: default
+  refresh_interval: 30  # in seconds
+  max_items_per_page: 20
+  default_view: dashboard
+
+# Cache settings
+cache:
+  type: memory
+  expiration: 3600  # in seconds
+  max_size: 100  # in MB
+
+# Security settings
+security:
+  enable_auth: true
+  session_expiry: 86400  # 24 hours in seconds
+  cors_origins:
+    - http://localhost:3000
+    - http://localhost:8080
+    - http://127.0.0.1:8080
+
+# Notification settings
+notifications:
+  email:
+    enabled: false  # Disabled in development
+    smtp_server: smtp.example.com
+    smtp_port: 587
+    sender_email: noreply@example.com
+    admin_email: admin@example.com

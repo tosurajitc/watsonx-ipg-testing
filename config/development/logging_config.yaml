@@ -1,0 +1,91 @@
+# Development Logging Configuration
+
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  standard:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+  detailed:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(message)s"
+    datefmt: "%Y-%m-%d %H:%M:%S"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: standard
+    stream: ext://sys.stdout
+
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/watsonx_ipg_testing_dev.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf8
+
+  error_file:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: detailed
+    filename: logs/watsonx_ipg_testing_error_dev.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf8
+
+loggers:
+  # Root logger
+  "":
+    level: INFO
+    handlers: [console, file, error_file]
+    propagate: true
+  
+  # Module specific loggers
+  "src.phase1.jira_connector":
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  "src.phase1.llm_test_scenario_generator":
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  "src.phase1.test_case_manager":
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  "src.phase1.sharepoint_connector":
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  "src.phase2.rpa_controller":
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  "src.phase2.execution_logger":
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  "src.phase2.error_processor":
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+  
+  # Third-party libraries can be set to less verbose levels in development
+  "urllib3":
+    level: INFO
+    handlers: [console]
+    propagate: false
+
+  "matplotlib":
+    level: INFO
+    handlers: [console]
+    propagate: false
