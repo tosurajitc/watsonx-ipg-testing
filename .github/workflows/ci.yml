@@ -35,8 +35,21 @@ jobs:
     
     - name: Run unit tests
       run: |
-        pytest tests/unit/
+        mkdir -p test-reports
+        pytest tests/unit/ --junitxml=test-reports/unit-test-results.xml
+        coverage run -m pytest tests/unit/
+        coverage xml -o test-reports/coverage.xml
     
     - name: Run integration tests
       run: |
-        pytest tests/integration/
+        mkdir -p test-reports
+        pytest tests/integration/ --junitxml=test-reports/integration-test-results.xml
+    
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v3
+      if: always()  # Ensures artifacts are uploaded even if tests fail
+      with:
+        name: test-reports-${{ matrix.python-version }}
+        path: |
+          test-reports/
+        retention-days: 5
