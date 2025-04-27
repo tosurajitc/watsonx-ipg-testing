@@ -45,6 +45,7 @@ types-all
 
 # API testing
 httpx>=0.24.0
+openpyxl
 
 
 
