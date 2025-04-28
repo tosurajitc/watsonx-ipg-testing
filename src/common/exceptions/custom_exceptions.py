@@ -403,3 +403,74 @@ class ConfigurationValidationError(ConfigurationError):
         super().__init__(message)
         self.config_section = config_section
         self.validation_errors = validation_errors or []
+
+
+
+
+# Test Case Formatting Exceptions
+class TestCaseFormatError(WatsonxIPGError):
+    """Base class for test case formatting related exceptions."""
+    def __init__(self, message="Test case formatting operation failed"):
+        super().__init__(message)
+
+
+class TestCaseFormatInvalidError(TestCaseFormatError):
+    """Raised when a test case fails to meet required formatting standards."""
+    def __init__(self, test_case_id=None, format_issues=None, message=None):
+        if message is None:
+            base_msg = f"Invalid test case format for case: {test_case_id}" if test_case_id else "Invalid test case format"
+            if format_issues:
+                base_msg += f" - Issues: {', '.join(format_issues)}"
+        else:
+            base_msg = message
+        super().__init__(base_msg)
+        self.test_case_id = test_case_id
+        self.format_issues = format_issues or []
+
+
+class TestCaseTemplateError(TestCaseFormatError):
+    """Raised when there's an issue with test case template compatibility."""
+    def __init__(self, template_name=None, reason=None, message=None):
+        if message is None:
+            base_msg = f"Test case template error: {template_name}" if template_name else "Test case template error"
+            if reason:
+                base_msg += f" - {reason}"
+        else:
+            base_msg = message
+        super().__init__(base_msg)
+        self.template_name = template_name
+        self.reason = reason
+
+
+# Refinement Rule Exceptions
+class RefinementRuleError(WatsonxIPGError):
+    """Base class for test case refinement rule related exceptions."""
+    def __init__(self, message="Test case refinement rule operation failed"):
+        super().__init__(message)
+
+
+class RefinementRuleValidationError(RefinementRuleError):
+    """Raised when a refinement rule fails validation."""
+    def __init__(self, rule_id=None, validation_errors=None, message=None):
+        if message is None:
+            base_msg = f"Invalid refinement rule: {rule_id}" if rule_id else "Refinement rule validation failed"
+            if validation_errors:
+                base_msg += f" - Errors: {', '.join(validation_errors)}"
+        else:
+            base_msg = message
+        super().__init__(base_msg)
+        self.rule_id = rule_id
+        self.validation_errors = validation_errors or []
+
+
+class RefinementRuleConflictError(RefinementRuleError):
+    """Raised when refinement rules conflict with each other."""
+    def __init__(self, conflicting_rules=None, message=None):
+        if message is None:
+            base_msg = "Conflicting refinement rules detected"
+            if conflicting_rules:
+                base_msg += f" - Conflicts: {', '.join(conflicting_rules)}"
+        else:
+            base_msg = message
+        super().__init__(base_msg)
+        self.conflicting_rules = conflicting_rules or []        
