@@ -1,5 +1,136 @@
+<<<<<<< Updated upstream
 # Environments
 .env
 .venv
 env/
 venv/
+=======
+# Project Configuration
+PROJECT_NAME=Watsonx-IPG-Testing
+PROJECT_DESCRIPTION=Agentic AI Testing Solution
+
+# LLM Service Configuration
+# Supported services: "groq", "watsonx", "openai"
+LLM_SERVICE=groq
+
+# General LLM parameters 
+LLM_TEMPERATURE=0.2
+LLM_MAX_TOKENS=8000
+LLM_TOP_P=0.8
+LLM_FALLBACK_MODEL=llama3-8b-8192
+
+# GROQ Configuration
+GROQ_API_KEY=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
+GROQ_API_BASE=https://api.groq.com/openai/v1
+GROQ_MODEL=llama3-70b-8192
+GROQ_BACKUP_MODELS=llama3-8b-8192,mixtral-8x7b-32768
+
+# IBM Watsonx Configuration
+WATSONX_API_KEY=your_watsonx_api_key_here
+WATSONX_URL=https://us-south.ml.cloud.ibm.com
+WATSONX_PROJECT_ID=your_watsonx_project_id_here
+WATSONX_MODEL=ibm/granite-13b-chat-v2
+WATSONX_BACKUP_MODELS=ibm/granite-20b-instruct-v1,ibm/mpt-7b-instruct2
+WATSONX_SPACE_ID=your_watsonx_space_id
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_FILE=logs/application.log
+LOG_MAX_SIZE=10485760  # 10 MB
+LOG_BACKUP_COUNT=5
+
+# API Service Configuration
+API_HOST=0.0.0.0
+API_PORT=8000
+API_DEBUG=False
+API_WORKERS=4
+API_CORS_ORIGINS=http://localhost:3000,https://yourfrontend.com
+
+# OAuth General Configuration
+OAUTH_TOKEN_STORAGE=database
+OAUTH_STATE_SECRET=your_random_secret_key_for_state_validation
+OAUTH_SESSION_TIMEOUT=3600
+OAUTH_REFRESH_TOKEN_EXPIRY=2592000
+
+# PostgreSQL Database Configuration
+DB_HOST=your-postgres-instance.databases.cloud.ibm.com
+DB_PORT=5432
+DB_NAME=watsonx_ipg_testing
+DB_USER=db_user
+DB_PASSWORD=secure_password_here
+DB_SSL_MODE=require
+DATABASE_URL=postgresql://db_user:secure_password_here@your-postgres-instance.databases.cloud.ibm.com:5432/watsonx_ipg_testing
+DATABASE_POOL_SIZE=10
+DATABASE_MAX_OVERFLOW=20
+
+# IBM Cloud Object Storage Configuration
+COS_ENDPOINT=https://s3.us-south.cloud-object-storage.appdomain.cloud
+COS_API_KEY=your_ibm_cloud_api_key
+COS_INSTANCE_CRN=crn:v1:bluemix:public:cloud-object-storage:global:a/your_account_id:your_instance_id::
+COS_AUTH_ENDPOINT=https://iam.cloud.ibm.com/identity/token
+
+# MinIO Configuration (Alternative to IBM COS)
+MINIO_ENDPOINT=your-minio-server.example.com:9000
+MINIO_ACCESS_KEY=minio_access_key
+MINIO_SECRET_KEY=minio_secret_key
+MINIO_SECURE=True
+
+# JIRA Configuration
+JIRA_URL=https://your-jira-instance.com
+JIRA_OAUTH_CLIENT_ID=your_jira_oauth_client_id
+JIRA_OAUTH_CLIENT_SECRET=your_jira_oauth_client_secret
+JIRA_OAUTH_REDIRECT_URI=https://your-app.com/auth/jira/callback
+JIRA_OAUTH_SCOPE=read:jira-work write:jira-work manage:jira-project
+
+# SharePoint Configuration
+SHAREPOINT_URL=https://your-sharepoint-site.sharepoint.com
+SHAREPOINT_TENANT_ID=your_tenant_id
+SHAREPOINT_OAUTH_CLIENT_ID=your_client_id
+SHAREPOINT_OAUTH_CLIENT_SECRET=your_client_secret
+SHAREPOINT_OAUTH_REDIRECT_URI=https://your-app.com/auth/sharepoint/callback
+SHAREPOINT_OAUTH_SCOPE=Sites.ReadWrite.All Files.ReadWrite.All
+
+# ALM Configuration with OAuth 2.0
+ALM_URL=https://your-alm-instance.com
+ALM_OAUTH_CLIENT_ID=your_alm_oauth_client_id
+ALM_OAUTH_CLIENT_SECRET=your_alm_oauth_client_secret
+ALM_OAUTH_REDIRECT_URI=https://your-app.com/auth/alm/callback
+ALM_OAUTH_SCOPE=alm-api
+
+# UFT Configuration
+UFT_API_URL=https://your-uft-server.example.com/api
+UFT_OAUTH_CLIENT_ID=your_uft_oauth_client_id
+UFT_OAUTH_CLIENT_SECRET=your_uft_oauth_client_secret
+
+# Email Notification Service
+SMTP_SERVER=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=notifications@your-company.com
+SMTP_PASSWORD=email_password
+SMTP_USE_TLS=True
+
+# Testing Configuration
+TEST_ENVIRONMENT=development
+TEST_COVERAGE_THRESHOLD=80
+
+# Security Configuration
+SECRET_KEY=your_generated_secret_key_here
+PASSWORD_HASH_ROUNDS=12
+
+# Feature Flags
+ENABLE_AI_TEST_GENERATION=true
+ENABLE_RPA_EXECUTION=true
+ENABLE_ADVANCED_ANALYTICS=false
+
+# Monitoring and Telemetry
+ENABLE_SENTRY=false
+SENTRY_DSN=your_sentry_dsn_here
+
+# RPA Automation Configuration
+RPA_CONTROLLER_PATH=C:/AutomationAnywhere/BotRunner/Controller.xlsx
+RPA_DRIVER_SCRIPT_PATH=C:/AutomationAnywhere/BotRunner/Driver.js
+RPA_EXECUTION_LOGS_PATH=C:/AutomationAnywhere/BotRunner/Logs
+
+# Debugging
+DEBUG=False
+>>>>>>> Stashed changes

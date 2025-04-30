@@ -16,3 +16,14 @@ git remote add origin https://github.com/tosurajitc/watsonx-ipg-testing.git
 
 # Push your code to GitHub
 git push -u origin develop
+
+
+You have local changes that are not yet pushed to GitHub, but you also want to pull your team member’s 
+latest updates from the GitHub repository (https://github.com/tosurajitc/watsonx-ipg-testing) without losing your local work.
+
+
+git status              #First, verify what changes are currently in your local environment:
+git stash               #To avoid losing your local work, stash them safely
+git pull origin main    #Now you can safely pull the latest updates:
+git stash pop           #Once the pull is complete, reapply your local changes
+                        # resolve conflicts if needed

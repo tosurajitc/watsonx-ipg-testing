@@ -55,6 +55,327 @@ except ImportError:
     st.warning("Some modules are not yet implemented. Limited functionality will be available.")
 
 
+
+
+#################### Testing blocl
+
+import streamlit as st
+import pandas as pd
+import time
+import random
+from ui_utils import show_info_message, show_success_message, show_error_message
+from state_management import add_notification
+import mock_services
+
+def show_execution():
+    """Display the test execution module UI."""
+    st.header("Test Execution Module")
+    
+    # Create tabs for different functions
+    tabs = st.tabs(["Initiate Execution", "Execution Dashboard", "Upload Manual Results"])
+    
+    with tabs[0]:
+        show_initiate_execution()
+    
+    with tabs[1]:
+        show_execution_dashboard()
+    
+    with tabs[2]:
+        show_upload_manual_results()
+
+def show_initiate_execution():
+    """Display the initiate execution tab."""
+    st.subheader("Initiate Execution")
+    
+    # Test case selection
+    st.markdown("### Select Test Cases")
+    
+    # Get test cases from session state or mock
+    test_cases = st.session_state.get("current_test_cases", mock_services.get_test_cases())
+    
+    # Create a selection dataframe
+    selection_data = [{
+        "ID": tc["id"],
+        "Title": tc["title"],
+        "Type": tc["type"],
+        "Owner": tc["owner"],
+        "Status": tc["status"]
+    } for tc in test_cases if tc["status"] != "Obsolete"]
+    
+    selection_df = pd.DataFrame(selection_data)
+    
+    # Display the selection dataframe
+    st.dataframe(selection_df, use_container_width=True)
+    
+    # Multi-select for test cases
+    selected_test_cases = st.multiselect(
+        "Select Test Cases for Execution",
+        options=[tc["id"] for tc in test_cases if tc["status"] != "Obsolete"],
+        format_func=lambda x: f"{x}: {next((tc['title'] for tc in test_cases if tc['id'] == x), '')}"
+    )
+    
+    if selected_test_cases:
+        st.write(f"Selected {len(selected_test_cases)} test cases for execution.")
+        
+        # Execution mode selection
+        st.markdown("### Execution Mode")
+        execution_mode = st.radio(
+            "Select Execution Mode",
+            ["Automated", "Manual"]
+        )
+        
+        if execution_mode == "Automated":
+            st.markdown("### Automated Execution Options")
+            
+            # Display target controller file
+            st.info("Target Controller File: **TestExecutionController.xlsx**")
+            st.write("This controller file will be updated with the selected test cases and execution flags.")
+            
+            # Execute button
+            if st.button("Prepare & Run Automated Tests", key="run_automated_button"):
+                with st.spinner("Preparing and running automated tests..."):
+                    # Simulate processing time
+                    time.sleep(3)
+                    
+                    # Use mock function to simulate execution
+                    execution_run = mock_services.execute_test_cases(selected_test_cases, "Automated")
+                    
+                    # Add to session state for tracking
+                    if "execution_runs" not in st.session_state:
+                        st.session_state["execution_runs"] = []
+                    st.session_state["execution_runs"].append(execution_run)
+                    
+                    show_success_message(f"Automated test execution initiated! Run ID: {execution_run['id']}")
+                    add_notification(f"Started automated execution {execution_run['id']} for {len(selected_test_cases)} test cases", "success")
+                    
+                    # Navigate to dashboard tab
+                    st.session_state["active_execution_tab"] = 1
+                    st.experimental_rerun()
+        
+        else:  # Manual execution
+            st.markdown("### Manual Execution Options")
+            
+            # Tester assignment
+            st.write("Assign Tester:")
+            tester_options = ["John Doe", "Jane Smith", "Mark Johnson", "Selected Test Case Owners"]
+            assigned_tester = st.selectbox("Select Tester", tester_options)
+            
+            # Notify button
+            if st.button("Notify Tester(s) for Manual Execution", key="notify_tester_button"):
+                with st.spinner("Sending notifications to testers..."):
+                    # Simulate processing time
+                    time.sleep(2)
+                    
+                    # Use mock function to simulate execution setup
+                    execution_run = mock_services.execute_test_cases(selected_test_cases, "Manual")
+                    
+                    # Add to session state for tracking
+                    if "execution_runs" not in st.session_state:
+                        st.session_state["execution_runs"] = []
+                    st.session_state["execution_runs"].append(execution_run)
+                    
+                    if assigned_tester == "Selected Test Case Owners":
+                        show_success_message("Notifications sent to all test case owners for manual execution!")
+                    else:
+                        show_success_message(f"Notifications sent to {assigned_tester} for manual execution!")
+                    
+                    add_notification(f"Requested manual execution for {len(selected_test_cases)} test cases", "info")
+                    
+                    # Navigate to dashboard tab
+                    st.session_state["active_execution_tab"] = 1
+                    st.experimental_rerun()
+    else:
+        st.info("Please select at least one test case to execute.")
+
+def show_execution_dashboard():
+    """Display the execution dashboard tab."""
+    st.subheader("Execution Dashboard")
+    
+    # Check if we should be on this tab
+    if "active_execution_tab" in st.session_state and st.session_state["active_execution_tab"] == 1:
+        del st.session_state["active_execution_tab"]
+    
+    # Get execution runs from session state or mock
+    execution_runs = st.session_state.get("execution_runs", mock_services.get_execution_runs())
+    
+    if execution_runs:
+        # Create a dataframe for display
+        execution_data = []
+        for run in execution_runs:
+            execution_data.append({
+                "Run ID": run["id"],
+                "Status": run["status"],
+                "Start Time": run["start_time"][:16].replace("T", " ") if run["start_time"] else "N/A",
+                "End Time": run["end_time"][:16].replace("T", " ") if run["end_time"] else "N/A",
+                "Progress": "100%" if run["status"] == "Completed" else "Failed" if run["status"] == "Failed" else "In Progress",
+                "Pass": run["pass_count"],
+                "Fail": run["fail_count"],
+                "Blocked": run["blocked_count"]
+            })
+        
+        execution_df = pd.DataFrame(execution_data)
+        st.dataframe(execution_df, use_container_width=True)
+        
+        # Select a run for actions
+        selected_run = st.selectbox(
+            "Select a Run for Actions",
+            options=[run["id"] for run in execution_runs],
+            format_func=lambda x: f"{x} ({next((run['status'] for run in execution_runs if run['id'] == x), '')})"
+        )
+        
+        if selected_run:
+            st.markdown("### Actions")
+            
+            selected_run_data = next((run for run in execution_runs if run["id"] == selected_run), None)
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("View Details", key="view_details_button"):
+                    with st.spinner("Loading execution details..."):
+                        # Simulate processing time
+                        time.sleep(1)
+                        
+                        st.session_state["selected_run_details"] = selected_run_data
+                        show_info_message("Showing execution details below.")
+            
+            with col2:
+                if selected_run_data["status"] == "In Progress":
+                    if st.button("Abort Run", key="abort_run_button"):
+                        with st.spinner("Aborting execution run..."):
+                            # Simulate processing time
+                            time.sleep(2)
+                            
+                            # Update status
+                            for run in execution_runs:
+                                if run["id"] == selected_run:
+                                    run["status"] = "Aborted"
+                            
+                            show_success_message(f"Execution run {selected_run} aborted successfully!")
+                            add_notification(f"Aborted execution run {selected_run}", "warning")
+                            st.experimental_rerun()
+                else:
+                    st.write("Run is not in progress")
+            
+            with col3:
+                if selected_run_data["status"] in ["Completed", "Failed"]:
+                    if selected_run_data["fail_count"] > 0:
+                        if st.button("Analyze Failures", key="analyze_failures_button"):
+                            with st.spinner("Analyzing failures..."):
+                                # Simulate processing time
+                                time.sleep(2)
+                                
+                                st.session_state["analyze_run_id"] = selected_run
+                                st.session_state["page"] = "Analysis & Defects"
+                                st.experimental_rerun()
+                    
+                    if st.button("View Report", key="view_report_button"):
+                        with st.spinner("Generating report..."):
+                            # Simulate processing time
+                            time.sleep(2)
+                            
+                            st.session_state["report_run_id"] = selected_run
+                            st.session_state["page"] = "Reporting"
+                            st.experimental_rerun()
+        
+        # Display selected run details if available
+        if "selected_run_details" in st.session_state:
+            st.markdown("---")
+            st.subheader(f"Details for Run: {st.session_state['selected_run_details']['id']}")
+            
+            # Create some mock detailed results
+            detailed_results = []
+            run_details = st.session_state["selected_run_details"]
+            total_cases = run_details["pass_count"] + run_details["fail_count"] + run_details["blocked_count"]
+            
+            test_cases = st.session_state.get("current_test_cases", mock_services.get_test_cases())
+            
+            for i in range(min(total_cases, len(test_cases))):
+                tc = test_cases[i]
+                
+                # Determine result based on counts
+                if i < run_details["pass_count"]:
+                    result = "Pass"
+                elif i < run_details["pass_count"] + run_details["fail_count"]:
+                    result = "Fail"
+                else:
+                    result = "Blocked"
+                
+                detailed_results.append({
+                    "Test Case ID": tc["id"],
+                    "Title": tc["title"],
+                    "Result": result,
+                    "Duration (s)": random.randint(1, 60),
+                    "Executed By": "Automation" if tc["type"] == "Automated" else tc["owner"],
+                    "Notes": f"Test {result.lower()}ed" if result != "Blocked" else "Test was blocked"
+                })
+            
+            detailed_df = pd.DataFrame(detailed_results)
+            st.dataframe(detailed_df, use_container_width=True)
+            
+            # Clear button
+            if st.button("Clear Details", key="clear_details_button"):
+                del st.session_state["selected_run_details"]
+                st.experimental_rerun()
+    else:
+        st.info("No execution runs available. Initiate a test execution first.")
+
+def show_upload_manual_results():
+    """Display the upload manual results tab."""
+    st.subheader("Upload Manual Results")
+    
+    # Run ID selection
+    execution_runs = st.session_state.get("execution_runs", mock_services.get_execution_runs())
+    manual_runs = [run for run in execution_runs if "Manual" in run.get("id", "")]
+    
+    if manual_runs:
+        selected_run_id = st.selectbox(
+            "Select the Corresponding Test Run ID",
+            options=[run["id"] for run in manual_runs],
+            format_func=lambda x: f"{x} ({next((run['status'] for run in manual_runs if run['id'] == x), '')})"
+        )
+        
+        # File upload area
+        uploaded_files = st.file_uploader(
+            "Upload Test Execution Reports",
+            type=["xlsx", "pdf", "jpg", "png"],
+            accept_multiple_files=True,
+            help="Upload Excel reports, PDFs, or screenshots of test results"
+        )
+        
+        if uploaded_files:
+            st.write(f"Uploaded {len(uploaded_files)} files:")
+            for file in uploaded_files:
+                st.write(f"- {file.name} ({file.size} bytes)")
+            
+            # Upload button
+            if st.button("Upload Results to SharePoint", key="upload_results_button"):
+                with st.spinner("Uploading results to SharePoint..."):
+                    # Simulate processing time
+                    time.sleep(3)
+                    
+                    # Update run status
+                    for run in execution_runs:
+                        if run["id"] == selected_run_id:
+                            run["status"] = "Completed"
+                            run["end_time"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+                            # Random results
+                            total = sum([run["pass_count"], run["fail_count"], run["blocked_count"]])
+                            run["pass_count"] = random.randint(0, total)
+                            run["fail_count"] = random.randint(0, total - run["pass_count"])
+                            run["blocked_count"] = total - run["pass_count"] - run["fail_count"]
+                    
+                    show_success_message("Results uploaded to SharePoint successfully!")
+                    add_notification(f"Uploaded manual test results for {selected_run_id}", "success")
+        else:
+            st.info("Please upload at least one file containing test results.")
+    else:
+        st.info("No manual execution runs available. Initiate a manual test execution first.")
+
+################### Testing block endss here
+
+
+
 class ExecutionUI:
     """Main class for the Test Execution UI module."""
     

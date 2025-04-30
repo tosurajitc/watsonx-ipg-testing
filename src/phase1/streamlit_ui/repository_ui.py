@@ -33,6 +33,375 @@ from src.phase1.test_case_manager.version_controller import create_new_version, 
 import src.common.utils.ui_utils as ui_utils
 
 
+
+
+#################### Testing blocl
+
+import streamlit as st
+import pandas as pd
+import time
+from ui_utils import show_info_message, show_success_message, show_error_message
+from state_management import add_notification
+import mock_services
+
+def show_repository():
+    """Display the repository and comparison module UI."""
+    st.header("Test Repository & Comparison Module")
+    
+    # Create tabs for different functions
+    tabs = st.tabs(["Repository Browser", "Comparison Results", "Tracking Lists"])
+    
+    with tabs[0]:
+        show_repository_browser()
+    
+    with tabs[1]:
+        show_comparison_results()
+    
+    with tabs[2]:
+        show_tracking_lists()
+
+def show_repository_browser():
+    """Display the repository browser tab."""
+    st.subheader("Repository Browser")
+    
+    # Connection status indicators
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        sharepoint_status = st.session_state.integration_status.get("sharepoint", False)
+        status_color = "green" if sharepoint_status else "red"
+        st.markdown(f"SharePoint Connection: <span style='color:{status_color};'>{'Connected' if sharepoint_status else 'Disconnected'}</span>", unsafe_allow_html=True)
+    
+    with col2:
+        jira_status = st.session_state.integration_status.get("jira", False)
+        status_color = "green" if jira_status else "red"
+        st.markdown(f"JIRA Connection: <span style='color:{status_color};'>{'Connected' if jira_status else 'Disconnected'}</span>", unsafe_allow_html=True)
+    
+    with col3:
+        alm_status = st.session_state.integration_status.get("alm", False)
+        status_color = "green" if alm_status else "red"
+        st.markdown(f"ALM Connection: <span style='color:{status_color};'>{'Connected' if alm_status else 'Disconnected'}</span>", unsafe_allow_html=True)
+    
+    # Search and filter controls
+    st.markdown("---")
+    st.subheader("Search and Filter")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        search_term = st.text_input("Search by ID or Keyword", placeholder="Enter search term...")
+    
+    with col2:
+        filter_options = st.multiselect(
+            "Filter by",
+            ["Status: Active", "Status: Under Maintenance", "Status: Obsolete", "Type: Manual", "Type: Automated"],
+            default=["Status: Active"]
+        )
+    
+    # Get test cases from mock data if not in session state
+    if "current_test_cases" not in st.session_state or not st.session_state.current_test_cases:
+        st.session_state.current_test_cases = mock_services.get_test_cases()
+    
+    # Display test cases
+    test_cases = st.session_state.current_test_cases
+    
+    # Apply search filter if provided
+    if search_term:
+        test_cases = [tc for tc in test_cases if search_term.lower() in tc["id"].lower() or search_term.lower() in tc["title"].lower()]
+    
+    # Apply status/type filters
+    if filter_options:
+        filtered_test_cases = []
+        for tc in test_cases:
+            for filter_option in filter_options:
+                if filter_option.startswith("Status:") and filter_option.split(": ")[1] == tc["status"]:
+                    filtered_test_cases.append(tc)
+                    break
+                elif filter_option.startswith("Type:") and filter_option.split(": ")[1] == tc["type"]:
+                    filtered_test_cases.append(tc)
+                    break
+        test_cases = filtered_test_cases
+    
+    # Create a dataframe for display
+    if test_cases:
+        test_cases_display = [{
+            "ID": tc["id"],
+            "Title": tc["title"],
+            "Status": tc["status"],
+            "Owner": tc["owner"],
+            "Type": tc["type"],
+            "Last Modified": "2025-04-22"  # Placeholder date
+        } for tc in test_cases]
+        
+        test_cases_df = pd.DataFrame(test_cases_display)
+        st.dataframe(test_cases_df, use_container_width=True)
+    else:
+        show_info_message("No test cases found matching the criteria.")
+    
+    # Refresh button
+    if st.button("Refresh Repository", key="refresh_repo_button"):
+        with st.spinner("Refreshing repository..."):
+            # Simulate processing time
+            time.sleep(1)
+            st.session_state.current_test_cases = mock_services.get_test_cases()
+            show_success_message("Repository refreshed successfully!")
+            st.experimental_rerun()
+
+def show_comparison_results():
+    """Display the comparison results tab."""
+    st.subheader("Comparison Results")
+    
+    # Check if we came from comparison in test generation module
+    if "compare_result" in st.session_state and st.session_state["compare_result"]:
+        # Show comparison results
+        with st.spinner("Loading comparison results..."):
+            # Simulate processing time
+            time.sleep(1)
+            
+            # Use mock comparison data
+            if "generated_test_cases" in st.session_state and st.session_state["generated_test_cases"]:
+                # Take the first generated test case for demonstration
+                test_case = st.session_state["generated_test_cases"][0]
+                comparison_result = mock_services.compare_with_repository(test_case)
+                
+                st.subheader(f"Comparison for Test Case: {test_case['id']}")
+                st.markdown(f"**Title:** {test_case['title']}")
+                
+                # Display result type prominently
+                result_type = comparison_result["result"]
+                if result_type == "Exact Match Found":
+                    st.success(result_type)
+                elif result_type == "Partial Match Found":
+                    st.warning(result_type)
+                else:  # New Test Case
+                    st.info(result_type)
+                
+                # Display the comparison details
+                if result_type in ["Exact Match Found", "Partial Match Found"]:
+                    existing_case = comparison_result["existing_case"]
+                    
+                    st.markdown("### Existing Test Case Details")
+                    st.write(f"**ID:** {existing_case['id']}")
+                    st.write(f"**Title:** {existing_case['title']}")
+                    st.write(f"**Status:** {existing_case['status']}")
+                    st.write(f"**Owner:** {existing_case['owner']}")
+                    st.write(f"**Type:** {existing_case['type']}")
+                    
+                    # Display differences if partial match
+                    if result_type == "Partial Match Found" and comparison_result["differences"]:
+                        st.markdown("### Differences")
+                        for diff in comparison_result["differences"]:
+                            st.markdown(f"- {diff}")
+                
+                # Actions based on result type
+                st.markdown("---")
+                st.subheader("Actions")
+                
+                if result_type == "Exact Match Found":
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**Test Data Status**")
+                        test_data_available = random.choice([True, False])
+                        if test_data_available:
+                            st.success("Test data available")
+                            if st.button("Trigger Execution (with existing data)", key="trigger_exec_button"):
+                                with st.spinner("Triggering execution..."):
+                                    # Simulate processing time
+                                    time.sleep(2)
+                                    show_success_message("Execution triggered successfully!")
+                                    add_notification(f"Triggered execution for {existing_case['id']}", "success")
+                                    # Navigate to execution module
+                                    st.session_state["page"] = "Test Execution"
+                                    st.experimental_rerun()
+                        else:
+                            st.warning("Test data needs generation")
+                            if st.button("Generate Data & Trigger Execution", key="gen_data_button"):
+                                with st.spinner("Generating test data and triggering execution..."):
+                                    # Simulate processing time
+                                    time.sleep(3)
+                                    show_success_message("Test data generated and execution triggered successfully!")
+                                    add_notification(f"Generated data and triggered execution for {existing_case['id']}", "success")
+                                    # Navigate to execution module
+                                    st.session_state["page"] = "Test Execution"
+                                    st.experimental_rerun()
+                    
+                    with col2:
+                        if existing_case["type"] == "Manual":
+                            if st.button("Notify Owner for Execution", key="notify_owner_button"):
+                                with st.spinner("Sending notification..."):
+                                    # Simulate processing time
+                                    time.sleep(1)
+                                    show_success_message(f"Notification sent to {existing_case['owner']} successfully!")
+                                    add_notification(f"Notified {existing_case['owner']} to execute {existing_case['id']}", "info")
+                        
+                        if st.button("Update 'Matched' List", key="update_matched_button"):
+                            with st.spinner("Updating matched list..."):
+                                # Simulate processing time
+                                time.sleep(1)
+                                show_success_message("Matched list updated successfully!")
+                                # Store in session state for tracking lists tab
+                                if "matched_list" not in st.session_state:
+                                    st.session_state["matched_list"] = []
+                                st.session_state["matched_list"].append({
+                                    "generated_id": test_case["id"],
+                                    "matched_id": existing_case["id"],
+                                    "title": existing_case["title"],
+                                    "owner": existing_case["owner"],
+                                    "type": existing_case["type"]
+                                })
+                
+                elif result_type == "Partial Match Found":
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        if st.button("Notify Owner of Suggested Changes", key="notify_changes_button"):
+                            with st.spinner("Sending notification..."):
+                                # Simulate processing time
+                                time.sleep(1)
+                                show_success_message(f"Notification sent to {existing_case['owner']} successfully!")
+                                add_notification(f"Notified {existing_case['owner']} of suggested changes for {existing_case['id']}", "info")
+                        
+                        if st.button("Upload New Version", key="upload_version_button"):
+                            with st.spinner("Uploading new version..."):
+                                # Simulate processing time
+                                time.sleep(2)
+                                # Mark as under maintenance if automated
+                                if existing_case["type"] == "Automated":
+                                    st.info(f"Test case {existing_case['id']} marked as 'Under Maintenance'")
+                                show_success_message("New version uploaded successfully!")
+                                add_notification(f"Uploaded new version of {existing_case['id']}", "success")
+                    
+                    with col2:
+                        if st.button("Update 'Needs Modification' List", key="update_modification_button"):
+                            with st.spinner("Updating needs modification list..."):
+                                # Simulate processing time
+                                time.sleep(1)
+                                show_success_message("Needs modification list updated successfully!")
+                                # Store in session state for tracking lists tab
+                                if "modification_list" not in st.session_state:
+                                    st.session_state["modification_list"] = []
+                                st.session_state["modification_list"].append({
+                                    "generated_id": test_case["id"],
+                                    "existing_id": existing_case["id"],
+                                    "title": existing_case["title"],
+                                    "owner": existing_case["owner"],
+                                    "differences": len(comparison_result["differences"])
+                                })
+                
+                else:  # New Test Case
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("### Owner Assignment Rule Preview")
+                        st.info("Based on predefined rules, this test case will be assigned to: **John Doe**")
+                        
+                        if st.button("Upload to Repository & Assign Owner", key="upload_new_button"):
+                            with st.spinner("Uploading to repository and assigning owner..."):
+                                # Simulate processing time
+                                time.sleep(2)
+                                show_success_message("Test case uploaded and assigned successfully!")
+                                add_notification(f"Created new test case {test_case['id']} and assigned to John Doe", "success")
+                    
+                    with col2:
+                        if st.button("Update 'New' List", key="update_new_button"):
+                            with st.spinner("Updating new list..."):
+                                # Simulate processing time
+                                time.sleep(1)
+                                show_success_message("New list updated successfully!")
+                                # Store in session state for tracking lists tab
+                                if "new_list" not in st.session_state:
+                                    st.session_state["new_list"] = []
+                                st.session_state["new_list"].append({
+                                    "id": test_case["id"],
+                                    "title": test_case["title"],
+                                    "assigned_to": "John Doe",
+                                    "type": test_case["type"]
+                                })
+                
+                # Clear the comparison result flag if user manually clicks a button
+                if st.button("Clear Comparison", key="clear_comparison_button"):
+                    del st.session_state["compare_result"]
+                    show_info_message("Comparison cleared.")
+                    st.experimental_rerun()
+        
+    else:
+        st.info("No comparison results to display. Select test cases in the Test Generation module and click 'Compare with Repository'.")
+
+def show_tracking_lists():
+    """Display the tracking lists tab."""
+    st.subheader("Tracking Lists")
+    
+    # Create tabs for different tracking lists
+    tracking_tabs = st.tabs(["Matched Cases", "Cases Needing Modification", "Newly Added Cases"])
+    
+    with tracking_tabs[0]:
+        st.subheader("Matched Cases")
+        
+        if "matched_list" in st.session_state and st.session_state["matched_list"]:
+            matched_df = pd.DataFrame(st.session_state["matched_list"])
+            st.dataframe(matched_df, use_container_width=True)
+            
+            if st.button("Export Matched List", key="export_matched_button"):
+                with st.spinner("Exporting matched list..."):
+                    # Simulate processing time
+                    time.sleep(1)
+                    show_success_message("Matched list exported successfully!")
+                    st.download_button(
+                        label="Download Matched List",
+                        data=b"Mock Excel Data",  # Just a placeholder
+                        file_name="matched_list.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+        else:
+            st.info("No matched cases in the tracking list yet.")
+    
+    with tracking_tabs[1]:
+        st.subheader("Cases Needing Modification")
+        
+        if "modification_list" in st.session_state and st.session_state["modification_list"]:
+            modification_df = pd.DataFrame(st.session_state["modification_list"])
+            st.dataframe(modification_df, use_container_width=True)
+            
+            if st.button("Export Modification List", key="export_modification_button"):
+                with st.spinner("Exporting modification list..."):
+                    # Simulate processing time
+                    time.sleep(1)
+                    show_success_message("Modification list exported successfully!")
+                    st.download_button(
+                        label="Download Modification List",
+                        data=b"Mock Excel Data",  # Just a placeholder
+                        file_name="modification_list.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+        else:
+            st.info("No cases needing modification in the tracking list yet.")
+    
+    with tracking_tabs[2]:
+        st.subheader("Newly Added Cases")
+        
+        if "new_list" in st.session_state and st.session_state["new_list"]:
+            new_df = pd.DataFrame(st.session_state["new_list"])
+            st.dataframe(new_df, use_container_width=True)
+            
+            if st.button("Export New List", key="export_new_button"):
+                with st.spinner("Exporting new list..."):
+                    # Simulate processing time
+                    time.sleep(1)
+                    show_success_message("New list exported successfully!")
+                    st.download_button(
+                        label="Download New List",
+                        data=b"Mock Excel Data",  # Just a placeholder
+                        file_name="new_list.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+        else:
+            st.info("No newly added cases in the tracking list yet.")
+
+################### Testing block endss here
+
+
+
 def display_repository_ui():
     """Main function to display the Test Repository & Comparison Module UI"""
     st.title("Test Repository & Comparison Module")

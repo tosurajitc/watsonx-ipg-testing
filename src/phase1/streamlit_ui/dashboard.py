@@ -9,6 +9,136 @@ import pandas as pd
 import altair as alt
 from datetime import datetime, timedelta
 import random  # For demo data - remove in production
+from ui_utils import create_card, create_metric_card, create_chart
+from components import notification_badge
+import mock_services  # Import mock services for demo data
+
+#################### Testing blocl
+
+
+def show_dashboard():
+    """Display the dashboard module."""
+    st.header("Dashboard")
+    
+    # Get mock data
+    pending_tasks = mock_services.get_pending_tasks()
+    recent_activity = mock_services.get_recent_activity()
+    defects = mock_services.get_defects()
+    execution_runs = mock_services.get_execution_runs()
+    
+    # Calculate summary metrics
+    total_test_cases = len(mock_services.get_test_cases())
+    total_executions = len(execution_runs)
+    pass_count = sum(run["pass_count"] for run in execution_runs)
+    fail_count = sum(run["fail_count"] for run in execution_runs)
+    total_defects = len(defects)
+    
+    # Layout
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        create_metric_card("Test Cases", total_test_cases)
+    
+    with col2:
+        create_metric_card("Executions", total_executions)
+    
+    with col3:
+        pass_rate = f"{int(pass_count/(pass_count + fail_count) * 100)}%" if pass_count + fail_count > 0 else "N/A"
+        create_metric_card("Pass Rate", pass_rate)
+    
+    with col4:
+        create_metric_card("Open Defects", total_defects)
+    
+    st.markdown("---")
+    
+    # Quick Actions section
+    st.subheader("Quick Actions")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("Generate Tests from Requirements"):
+            st.session_state["page"] = "Requirements"
+            st.experimental_rerun()
+    
+    with col2:
+        if st.button("Review Existing Test Case"):
+            st.session_state["page"] = "Test Repository"
+            st.experimental_rerun()
+    
+    with col3:
+        if st.button("Analyze Failed Test"):
+            st.session_state["page"] = "Analysis & Defects"
+            st.experimental_rerun()
+    
+    st.markdown("---")
+    
+    # Pending Tasks widget
+    st.subheader("Pending Tasks")
+    
+    if pending_tasks:
+        pending_df = pd.DataFrame(pending_tasks)
+        st.dataframe(pending_df, use_container_width=True)
+    else:
+        st.info("No pending tasks.")
+    
+    # Recent Activity widget
+    st.subheader("Recent Activity")
+    
+    if recent_activity:
+        activity_df = pd.DataFrame(recent_activity)
+        st.dataframe(activity_df, use_container_width=True)
+    else:
+        st.info("No recent activity.")
+    
+    # Test Execution Summary widget
+    st.subheader("Test Execution Summary")
+    
+    if execution_runs:
+        # Create chart data
+        chart_data = []
+        for run in execution_runs[:5]:  # Last 5 runs
+            chart_data.append({
+                "Run ID": run["id"],
+                "Passed": run["pass_count"],
+                "Failed": run["fail_count"],
+                "Blocked": run["blocked_count"]
+            })
+        
+        chart_df = pd.DataFrame(chart_data)
+        
+        # Create stacked bar chart
+        st.bar_chart(chart_df.set_index("Run ID"))
+    else:
+        st.info("No execution data available.")
+    
+    # Defect Summary widget
+    st.subheader("Defect Summary")
+    
+    if defects:
+        # Count defects by status
+        status_counts = {}
+        for defect in defects:
+            status = defect["status"]
+            status_counts[status] = status_counts.get(status, 0) + 1
+        
+        # Create pie chart data
+        pie_data = [{"Status": status, "Count": count} for status, count in status_counts.items()]
+        pie_df = pd.DataFrame(pie_data)
+        
+        # Create pie chart
+        fig = create_chart(pie_df, "pie", "Status", "Count", "Defects by Status")
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No defect data available.")
+
+
+
+################### Testing block endss here
+
+
+
+
 
 # Mock data functions - replace with actual data sources in production
 def get_pending_tasks():

@@ -40,6 +40,314 @@ from src.phase1.test_case_manager.metadata_manager import MetadataManager
 # Setup logger
 logger = logging.getLogger(__name__)
 
+
+
+
+#################### Testing blocl
+
+import streamlit as st
+import pandas as pd
+import time
+from ui_utils import show_info_message, show_success_message, show_error_message
+from state_management import add_notification, add_test_case
+import mock_services
+
+def show_test_generation():
+    """Display the test generation and refinement module UI."""
+    st.header("Test Generation & Refinement Module")
+    
+    # Create tabs for different functions
+    tabs = st.tabs(["Generate Detailed Test Cases", "Review & Refine Test Case"])
+    
+    with tabs[0]:
+        show_test_generation_tab()
+    
+    with tabs[1]:
+        show_test_refinement_tab()
+
+def show_test_generation_tab():
+    """Display the test generation tab."""
+    st.subheader("Generate Detailed Test Cases")
+    
+    # Check if we came from requirements selection
+    if "generated_from_requirements" in st.session_state:
+        st.info(f"Generating test cases from selected requirements: {', '.join(st.session_state['generated_from_requirements'])}")
+        
+        # Show the processing status
+        with st.spinner("Processing requirements and generating test cases..."):
+            # Simulate processing time
+            time.sleep(3)
+            
+            # Use mock data for generated test cases
+            generated_test_cases = mock_services.generate_test_cases_from_requirements(
+                st.session_state["generated_from_requirements"]
+            )
+            st.session_state["generated_test_cases"] = generated_test_cases
+        
+        # Clear the flag
+        del st.session_state["generated_from_requirements"]
+    
+    # Input methods for test generation
+    st.subheader("Input for Test Generation")
+    
+    input_method = st.radio(
+        "Select Input Method",
+        ["From Processed Requirements", "Direct Prompt"]
+    )
+    
+    if input_method == "From Processed Requirements":
+        # Check if requirements exist
+        if "requirements" in st.session_state and st.session_state.requirements:
+            # Multi-select for requirements
+            selected_reqs = st.multiselect(
+                "Select Requirements",
+                options=[req["id"] for req in st.session_state.requirements],
+                format_func=lambda x: f"{x}: {next((req['title'] for req in st.session_state.requirements if req['id'] == x), '')}"
+            )
+            
+            if selected_reqs:
+                if st.button("Generate Test Cases", key="gen_from_reqs_button"):
+                    with st.spinner("Generating test cases from requirements..."):
+                        # Simulate processing time
+                        time.sleep(3)
+                        
+                        # Use mock data for generated test cases
+                        generated_test_cases = mock_services.generate_test_cases_from_requirements(selected_reqs)
+                        st.session_state["generated_test_cases"] = generated_test_cases
+                        
+                        show_success_message("Test cases generated successfully!")
+                        add_notification("Generated test cases from requirements", "success")
+        else:
+            st.warning("No requirements available. Please process requirements first in the Requirements Module.")
+    else:  # Direct Prompt
+        # Text area for direct prompt
+        prompt = st.text_area(
+            "Enter Test Case Generation Prompt",
+            placeholder="E.g., Generate login tests for admin user",
+            height=100
+        )
+        
+        # Configuration options
+        st.subheader("Configuration")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            detail_level = st.select_slider(
+                "Detail Level",
+                options=["Low", "Medium", "High"],
+                value="Medium"
+            )
+        
+        with col2:
+            format_type = st.selectbox(
+                "Output Format",
+                ["Standard", "Gherkin", "Detailed"]
+            )
+        
+        if prompt:
+            if st.button("Generate Test Cases", key="gen_from_prompt_button"):
+                with st.spinner("Generating test cases from prompt..."):
+                    # Simulate processing time
+                    time.sleep(3)
+                    
+                    # Use mock data for generated test cases (simplified for direct prompt)
+                    generated_test_cases = [{
+                        "id": f"TC-{1000 + i}",
+                        "title": f"Test case {i+1} for {prompt[:30]}{'...' if len(prompt) > 30 else ''}",
+                        "status": "New",
+                        "owner": "AI Generated",
+                        "type": "Manual",
+                        "steps": [
+                            {"step_no": 1, "description": "Setup test environment", "expected": "Environment ready"},
+                            {"step_no": 2, "description": f"Execute {prompt[:20]}...", "expected": "Test executed"},
+                            {"step_no": 3, "description": "Verify results", "expected": "Results verified"},
+                        ],
+                    } for i in range(3)]
+                    
+                    st.session_state["generated_test_cases"] = generated_test_cases
+                    
+                    show_success_message("Test cases generated successfully!")
+                    add_notification("Generated test cases from prompt", "success")
+    
+    # Display generated test cases if available
+    if "generated_test_cases" in st.session_state and st.session_state["generated_test_cases"]:
+        st.markdown("---")
+        st.subheader("Generated Test Cases")
+        
+        # Display test cases in a prettier format
+        for i, test_case in enumerate(st.session_state["generated_test_cases"]):
+            with st.expander(f"{test_case['id']}: {test_case['title']}", expanded=i == 0):
+                st.write(f"**Status:** {test_case['status']}")
+                st.write(f"**Owner:** {test_case['owner']}")
+                st.write(f"**Type:** {test_case['type']}")
+                
+                st.subheader("Steps")
+                steps_df = pd.DataFrame(test_case["steps"])
+                st.dataframe(steps_df, use_container_width=True)
+        
+        # Actions for generated test cases
+        st.markdown("---")
+        st.subheader("Actions")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("Export to Excel", key="export_button"):
+                with st.spinner("Exporting to Excel..."):
+                    # Simulate processing time
+                    time.sleep(1)
+                    show_success_message("Test cases exported to Excel successfully!")
+                    st.download_button(
+                        label="Download Excel File",
+                        data=b"Mock Excel Data",  # Just a placeholder
+                        file_name="test_cases_export.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+        
+        with col2:
+            if st.button("Compare with Repository", key="compare_button"):
+                with st.spinner("Comparing with repository..."):
+                    # Simulate processing time
+                    time.sleep(2)
+                    
+                    # Store for repository module to use
+                    st.session_state["compare_result"] = True
+                    
+                    show_success_message("Comparison completed! Navigating to Repository module...")
+                    add_notification("Compared generated test cases with repository", "success")
+                    
+                    # Navigate to repository module
+                    st.session_state["page"] = "Test Repository"
+                    st.experimental_rerun()
+
+def show_test_refinement_tab():
+    """Display the test refinement tab."""
+    st.subheader("Review & Refine Test Case")
+    
+    # File upload for existing test case
+    uploaded_file = st.file_uploader(
+        "Upload Existing Test Case File",
+        type=["xlsx", "docx"],
+        help="Upload an existing test case in Excel or Word format"
+    )
+    
+    if uploaded_file is not None:
+        st.write(f"File name: {uploaded_file.name}")
+        st.write(f"File size: {uploaded_file.size} bytes")
+        
+        # Process button
+        if st.button("Analyze & Suggest Refinements", key="analyze_button"):
+            with st.spinner("Analyzing test case and generating refinements..."):
+                # Simulate processing time
+                time.sleep(3)
+                
+                # Use mock data - select a random test case to refine
+                if mock_services.get_test_cases():
+                    test_case_id = mock_services.get_test_cases()[0]["id"]
+                    original_test_case = mock_services.get_test_case_by_id(test_case_id)
+                    refined_test_case = mock_services.refine_test_case(test_case_id)
+                    
+                    st.session_state["original_test_case"] = original_test_case
+                    st.session_state["refined_test_case"] = refined_test_case
+                    
+                    show_success_message("Analysis complete! Review the suggested refinements below.")
+    
+    # Display comparison if available
+    if "original_test_case" in st.session_state and "refined_test_case" in st.session_state:
+        st.markdown("---")
+        st.subheader("Test Case Comparison")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### Original Test Case")
+            original_tc = st.session_state["original_test_case"]
+            st.write(f"**ID:** {original_tc['id']}")
+            st.write(f"**Title:** {original_tc['title']}")
+            st.write(f"**Status:** {original_tc['status']}")
+            st.write(f"**Owner:** {original_tc['owner']}")
+            st.write(f"**Type:** {original_tc['type']}")
+            
+            st.markdown("#### Steps")
+            original_steps_df = pd.DataFrame(original_tc["steps"])
+            st.dataframe(original_steps_df, use_container_width=True)
+        
+        with col2:
+            st.markdown("### Refined Test Case")
+            refined_tc = st.session_state["refined_test_case"]
+            st.write(f"**ID:** {refined_tc['id']}")
+            st.write(f"**Title:** {refined_tc['title']}")
+            st.write(f"**Status:** {refined_tc['status']}")
+            st.write(f"**Owner:** {refined_tc['owner']}")
+            st.write(f"**Type:** {refined_tc['type']}")
+            
+            st.markdown("#### Steps")
+            refined_steps_df = pd.DataFrame(refined_tc["steps"])
+            st.dataframe(refined_steps_df, use_container_width=True)
+        
+        # AI suggestions
+        st.markdown("---")
+        st.subheader("AI Suggestions")
+        
+        suggestion_box = st.container()
+        with suggestion_box:
+            st.info("""
+            **Suggested Changes:**
+            
+            1. Added an additional validation step to ensure more thorough testing
+            2. Expanded expected results with more specific success criteria
+            3. Added test data references for better traceability
+            
+            These changes will improve test coverage and make the test case more robust.
+            """)
+        
+        # Actions
+        st.markdown("---")
+        st.subheader("Actions")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("Accept Suggestions & Update Repository", key="accept_button"):
+                with st.spinner("Updating repository..."):
+                    # Simulate processing time
+                    time.sleep(2)
+                    show_success_message("Test case updated in repository successfully!")
+                    add_notification(f"Updated test case {refined_tc['id']} with refinements", "success")
+                    # Add to session state
+                    add_test_case(refined_tc)
+            
+            if st.button("Notify Owner of Suggestions", key="notify_button"):
+                with st.spinner("Sending notification..."):
+                    # Simulate processing time
+                    time.sleep(1)
+                    show_success_message(f"Notification sent to {original_tc['owner']} successfully!")
+                    add_notification(f"Sent refinement suggestions for {original_tc['id']} to owner", "info")
+        
+        with col2:
+            if st.button("Mark as Obsolete", key="obsolete_button"):
+                confirm = st.checkbox("Confirm marking as obsolete", key="confirm_obsolete")
+                if confirm:
+                    with st.spinner("Marking as obsolete..."):
+                        # Simulate processing time
+                        time.sleep(1)
+                        show_success_message(f"Test case {original_tc['id']} marked as obsolete!")
+                        add_notification(f"Marked test case {original_tc['id']} as obsolete", "warning")
+            
+            if st.button("Discard Suggestions", key="discard_button"):
+                with st.spinner("Discarding suggestions..."):
+                    # Simulate processing time
+                    time.sleep(1)
+                    # Clear session state
+                    del st.session_state["original_test_case"]
+                    del st.session_state["refined_test_case"]
+                    show_info_message("Suggestions discarded.")
+                    st.experimental_rerun()
+
+################### Testing block endss here
+
+
 class TestCaseAPIService:
     """
     Class to provide programmatic access to the Test Case Management API functionality.

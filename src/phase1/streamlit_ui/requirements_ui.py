@@ -12,6 +12,187 @@ import os
 from datetime import datetime
 import time
 
+
+
+#################### Testing blocl
+
+import streamlit as st
+import pandas as pd
+from ui_utils import show_info_message, show_success_message, show_error_message
+from state_management import add_notification
+import mock_services
+import time
+
+def show_requirements():
+    """Display the requirements module UI."""
+    st.header("Requirements Module")
+    
+    # Tab layout for different input methods
+    tabs = st.tabs(["Connect to JIRA", "Upload File", "Manual Input"])
+    
+    with tabs[0]:
+        show_jira_input()
+    
+    with tabs[1]:
+        show_file_upload()
+    
+    with tabs[2]:
+        show_manual_input()
+    
+    # Display processed requirements if available
+    if "requirements" not in st.session_state:
+        st.session_state.requirements = mock_services.get_requirements()
+    
+    st.markdown("---")
+    st.subheader("Processed Requirements")
+    
+    if st.session_state.requirements:
+        requirements_df = pd.DataFrame(st.session_state.requirements)
+        st.dataframe(requirements_df, use_container_width=True)
+        
+        # Action buttons for selected requirements
+        st.subheader("Actions")
+        
+        # Multi-select for requirements
+        selected_requirements = st.multiselect(
+            "Select Requirements", 
+            options=[req["id"] for req in st.session_state.requirements],
+            format_func=lambda x: f"{x}: {next((req['title'] for req in st.session_state.requirements if req['id'] == x), '')}"
+        )
+        
+        if selected_requirements:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("Generate Scenarios/Test Cases", key="generate_button"):
+                    with st.spinner("Generating test cases..."):
+                        # Simulate processing time
+                        time.sleep(2)
+                        show_success_message("Test cases generated successfully!")
+                        add_notification("Generated test cases from selected requirements", "success")
+                        # Navigate to test generation module
+                        st.session_state["generated_from_requirements"] = selected_requirements
+                        st.session_state["page"] = "Test Generation"
+                        st.experimental_rerun()
+            
+            with col2:
+                if st.button("Link to Existing Test Cases", key="link_button"):
+                    with st.spinner("Linking to existing test cases..."):
+                        # Simulate processing time
+                        time.sleep(1)
+                        show_success_message("Requirements linked to existing test cases successfully!")
+                        add_notification("Linked requirements to existing test cases", "success")
+    else:
+        show_info_message("No requirements have been processed yet. Please use one of the input methods above.")
+
+def show_jira_input():
+    """Display the JIRA input section."""
+    st.subheader("Connect to JIRA")
+    
+    # JIRA connection form
+    with st.form("jira_form"):
+        jira_url = st.text_input("JIRA URL", "https://your-company.atlassian.net")
+        project_key = st.text_input("Project Key", "IPGTEST")
+        
+        # Authentication options
+        auth_type = st.radio("Authentication Method", ["API Token", "OAuth"])
+        
+        if auth_type == "API Token":
+            username = st.text_input("Username/Email")
+            api_token = st.text_input("API Token", type="password")
+        else:
+            st.info("OAuth configuration requires additional setup.")
+            oauth_token = st.text_input("OAuth Token", type="password")
+        
+        # Filters
+        st.subheader("Filters")
+        issue_types = st.multiselect(
+            "Issue Types", 
+            ["Story", "Bug", "Task", "Epic"],
+            default=["Story"]
+        )
+        
+        status = st.multiselect(
+            "Status",
+            ["Open", "In Progress", "Ready for Testing", "Done"],
+            default=["Ready for Testing"]
+        )
+        
+        # Advanced JQL query
+        advanced_jql = st.text_area("Custom JQL Query (Optional)", "project = IPGTEST AND issuetype = Story AND status = 'Ready for Testing'")
+        
+        # Submit button
+        submitted = st.form_submit_button("Fetch Requirements")
+        
+        if submitted:
+            with st.spinner("Connecting to JIRA and fetching requirements..."):
+                # Simulate processing time
+                time.sleep(2)
+                
+                # Use mock data
+                st.session_state.requirements = mock_services.get_requirements()
+                show_success_message("Successfully fetched requirements from JIRA!")
+                add_notification("Fetched requirements from JIRA", "success")
+
+def show_file_upload():
+    """Display the file upload section."""
+    st.subheader("Upload Requirements File")
+    
+    # File uploader
+    uploaded_file = st.file_uploader(
+        "Upload a file containing requirements",
+        type=["docx", "xlsx", "pdf", "txt"],
+        help="Supported formats: Word (.docx), Excel (.xlsx), PDF (.pdf), Text (.txt)"
+    )
+    
+    if uploaded_file is not None:
+        # Display file info
+        st.write(f"File name: {uploaded_file.name}")
+        st.write(f"File size: {uploaded_file.size} bytes")
+        
+        # Process button
+        if st.button("Process Upload", key="process_upload_button"):
+            with st.spinner("Processing uploaded file..."):
+                # Simulate processing time
+                time.sleep(3)
+                
+                # Use mock data
+                st.session_state.requirements = mock_services.get_requirements()
+                show_success_message(f"Successfully processed requirements from {uploaded_file.name}!")
+                add_notification(f"Processed requirements from {uploaded_file.name}", "success")
+
+def show_manual_input():
+    """Display the manual input section."""
+    st.subheader("Manual Input")
+    
+    # Text area for manual input
+    manual_requirements = st.text_area(
+        "Enter requirements (one per line or in structured format)",
+        height=200,
+        help="Enter one requirement per line or use a structured format like 'REQ-001: User should be able to login'"
+    )
+    
+    # Process button
+    if st.button("Process Manual Input", key="process_manual_button"):
+        if manual_requirements:
+            with st.spinner("Processing manual input..."):
+                # Simulate processing time
+                time.sleep(1)
+                
+                # Use mock data
+                st.session_state.requirements = mock_services.get_requirements()
+                show_success_message("Successfully processed manual requirements!")
+                add_notification("Processed manual requirements", "success")
+        else:
+            show_error_message("Please enter requirements in the text area.")
+
+################### Testing block endss here
+
+
+
+
+
+
 # Mock data functions - replace with actual implementations in production
 def fetch_jira_requirements(jira_url, project_key, issue_types, statuses, jql_query):
     """
