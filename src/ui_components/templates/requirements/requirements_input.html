@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'requirements/css/requirements.css' %}">
+{% endblock %}
+
+{% block content_title %}Requirements Ingestion{% endblock %}
+
+{% block content %}
+<div class="requirements-ingestion-container">
+    <div class="card requirements-card">
+        <div class="input-method-tabs">
+            <button class="tab-button {% if active_tab == 'jira' %}active{% endif %}" data-target="jira-tab">
+                <i class="fas fa-database"></i>
+                JIRA Connection
+            </button>
+            <button class="tab-button {% if active_tab == 'file' %}active{% endif %}" data-target="file-tab">
+                <i class="fas fa-upload"></i>
+                File Upload
+            </button>
+            <button class="tab-button {% if active_tab == 'manual' %}active{% endif %}" data-target="manual-tab">
+                <i class="fas fa-edit"></i>
+                Manual Input
+            </button>
+        </div>
+
+        <div class="card-body">
+            {% if messages %}
+                <div class="messages mb-4">
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- JIRA Connection Tab -->
+            <div id="jira-tab" class="tab-content {% if active_tab != 'jira' %}d-none{% endif %}">
+                <h3 class="mb-4">Connect to JIRA</h3>
+                <form method="post" action="{% url 'llm_test_scenario_generator:jira_requirements' %}" class="jira-form">
+                    {% csrf_token %}
+                    
+                    <div class="form-section">
+                        <h4>Connection Details</h4>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_jira_url" class="form-label">JIRA URL</label>
+                                <input type="url" name="jira_url" id="id_jira_url" 
+                                       class="form-control input-field" 
+                                       placeholder="e.g., https://yourcompany.atlassian.net" required>
+                                <div class="help-text">The URL of your JIRA instance</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_project_key" class="form-label">Project Key</label>
+                                <input type="text" name="project_key" id="id_project_key" 
+                                       class="form-control input-field" 
+                                       placeholder="e.g., TEST" required>
+                                <div class="help-text">The key of the project containing requirements</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>Authentication</h4>
+                        <div class="auth-methods">
+                            <div class="auth-method-option">
+                                <input type="radio" name="auth_method" id="id_auth_method_api_token" 
+                                       value="api_token" checked>
+                                <label for="id_auth_method_api_token">API Token</label>
+                            </div>
+                            <div class="auth-method-option">
+                                <input type="radio" name="auth_method" id="id_auth_method_basic" 
+                                       value="basic">
+                                <label for="id_auth_method_basic">Username/Password</label>
+                            </div>
+                            <div class="auth-method-option">
+                                <input type="radio" name="auth_method" id="id_auth_method_oauth" 
+                                       value="oauth">
+                                <label for="id_auth_method_oauth">OAuth</label>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_api_token" class="form-label">API Token</label>
+                                <input type="password" name="api_token" id="id_api_token" 
+                                       class="form-control input-field" 
+                                       placeholder="Your JIRA API token">
+                                <div class="help-text">Your JIRA API token. Keep this secure.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-cloud-download-alt"></i>
+                            Fetch Requirements
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- File Upload Tab -->
+            <div id="file-tab" class="tab-content {% if active_tab != 'file' %}d-none{% endif %}">
+                <h3 class="mb-4">Upload Requirements Document</h3>
+                <form method="post" action="{% url 'llm_test_scenario_generator:file_upload' %}" 
+                      enctype="multipart/form-data" class="file-upload-form">
+                    {% csrf_token %}
+                    
+                    <div class="file-upload-container">
+                        <i class="fas fa-cloud-upload-alt upload-large-icon"></i>
+                        <span class="upload-text">Drag & drop a file here or click to browse</span>
+                        <span class="upload-hint">Supported formats: Word, Excel, PDF, Text</span>
+                        
+                        <input type="file" name="requirement_file" id="id_requirement_file" 
+                               class="d-none" 
+                               accept=".doc,.docx,.xls,.xlsx,.pdf,.txt" required>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload"></i>
+                            Upload & Process
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Manual Input Tab -->
+            <div id="manual-tab" class="tab-content {% if active_tab != 'manual' %}d-none{% endif %}">
+                <h3 class="mb-4">Enter Requirements Manually</h3>
+                <form method="post" action="{% url 'llm_test_scenario_generator:manual_input' %}" 
+                      class="manual-input-form">
+                    {% csrf_token %}
+                    
+                    <div class="form-section">
+                        <textarea name="requirement_text" id="id_requirement_text" 
+                                  class="form-control" 
+                                  placeholder="Enter user stories, requirements, or business cases here..." 
+                                  rows="10" required></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i>
+                            Process Manual Input
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-target');
+
+            // Remove active class from all buttons and add to current
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Hide all tab contents and show selected
+            tabContents.forEach(content => {
+                content.classList.add('d-none');
+            });
+            document.getElementById(targetTab).classList.remove('d-none');
+        });
+    });
+});
+</script>
+{% endblock %}

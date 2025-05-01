@@ -27,3 +27,6 @@ git stash               #To avoid losing your local work, stash them safely
 git pull origin main    #Now you can safely pull the latest updates:
 git stash pop           #Once the pull is complete, reapply your local changes
                         # resolve conflicts if needed
+
+
+To run : python manage.py runserver                        

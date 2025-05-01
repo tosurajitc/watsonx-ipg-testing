@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Favicon</title>
+  <style>
+    body { margin: 0; padding: 0; background: transparent; }
+    .favicon {
+      width: 32px;
+      height: 32px;
+      background: #0d6efd;
+      border-radius: 4px;
+      position: relative;
+    }
+    .favicon::after {
+      content: 'W';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      font-family: Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div class="favicon"></div>
+</body>
+</html>

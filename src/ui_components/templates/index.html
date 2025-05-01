@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Watsonx for IPG Testing{% endblock %}
+
+{% block content_title %}Welcome to Watsonx for IPG Testing{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Home</li>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <h2 class="mb-4">Welcome to Watsonx for IPG Testing</h2>
+        <p class="lead mb-4">An AI-powered testing automation platform for IPG testing</p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card mb-4 bg-light">
+                    <div class="card-body">
+                        <h5 class="card-title">Platform Highlights</h5>
+                        <div class="row mt-4">
+                            <div class="col-md-4 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-circle bg-primary text-white me-3">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                    <div>AI-Powered Test Generation</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-circle bg-success text-white me-3">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </div>
+                                    <div>Automated Test Execution</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-circle bg-info text-white me-3">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <div>Intelligent Error Analysis</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <a href="{% url 'ui_components:dashboard' %}" class="btn btn-primary btn-lg px-4 mt-3">
+            Go to Dashboard <i class="fas fa-arrow-right ms-2"></i>
+        </a>
+    </div>
+</div>
+
+<style>
+.icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+</style>
+{% endblock %}

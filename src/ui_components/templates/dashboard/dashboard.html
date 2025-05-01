@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Watsonx for IPG Testing{% endblock %}
+
+{% block content_title %}Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Pending Tasks</h5>
+                <p class="card-text">You have 5 tasks awaiting your attention.</p>
+                <a href="#" class="btn btn-primary">View Tasks</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Recent Activity</h5>
+                <p class="card-text">10 activities in the last 24 hours.</p>
+                <a href="#" class="btn btn-primary">View Activity</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Test Execution</h5>
+                <p class="card-text">85% pass rate in the last run.</p>
+                <a href="#" class="btn btn-primary">View Details</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Defect Summary</h5>
+                <p class="card-text">3 open defects requiring attention.</p>
+                <a href="#" class="btn btn-primary">View Defects</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'ui_components:requirements' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-clipboard-list me-2"></i>Generate Tests from Requirements
+                    </a>
+                    <a href="{% url 'ui_components:test_repository' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-search me-2"></i>Review Existing Test Case
+                    </a>
+                    <a href="{% url 'ui_components:test_execution' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-play me-2"></i>View Execution Runs
+                    </a>
+                    <a href="{% url 'ui_components:analysis' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-bug me-2"></i>Analyze Failed Test
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

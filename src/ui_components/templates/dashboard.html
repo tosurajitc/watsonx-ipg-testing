@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Dashboard | Watsonx for IPG Testing{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+
+{% block content_title %}Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<!-- Top Stats Cards -->
+<div class="row">
+    <!-- Pending Tasks Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card h-100 dashboard-card">
+            <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <h5 class="card-title">Pending Tasks</h5>
+                        <h2 class="mt-3 mb-2">5</h2>
+                        <p class="text-muted mb-0">Tasks awaiting your attention</p>
+                    </div>
+                    <div class="dashboard-icon bg-primary-light text-primary">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="#" class="btn btn-sm btn-link text-primary px-0">
+                    View All Tasks <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card h-100 dashboard-card">
+            <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <h5 class="card-title">Recent Activity</h5>
+                        <h2 class="mt-3 mb-2">10</h2>
+                        <p class="text-muted mb-0">Activities in last 24 hours</p>
+                    </div>
+                    <div class="dashboard-icon bg-success-light text-success">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="#" class="btn btn-sm btn-link text-success px-0">
+                    View Activity <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test Execution Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card h-100 dashboard-card">
+            <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <h5 class="card-title">Test Execution</h5>
+                        <h2 class="mt-3 mb-2">85%</h2>
+                        <p class="text-muted mb-0">Pass rate in last run</p>
+                    </div>
+                    <div class="dashboard-icon bg-info-light text-info">
+                        <i class="fas fa-vial"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="#" class="btn btn-sm btn-link text-info px-0">
+                    View Test Results <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Defect Summary Card -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card h-100 dashboard-card">
+            <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <h5 class="card-title">Defect Summary</h5>
+                        <h2 class="mt-3 mb-2">3</h2>
+                        <p class="text-muted mb-0">Open defects requiring attention</p>
+                    </div>
+                    <div class="dashboard-icon bg-danger-light text-danger">
+                        <i class="fas fa-bug"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0">
+                <a href="#" class="btn btn-sm btn-link text-danger px-0">
+                    View Defects <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Test Results -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Recent Test Executions</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="timeframeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Last 7 Days
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="timeframeDropdown">
+                        <li><a class="dropdown-item" href="#">Today</a></li>
+                        <li><a class="dropdown-item" href="#">Last 7 Days</a></li>
+                        <li><a class="dropdown-item" href="#">Last 30 Days</a></li>
+                        <li><a class="dropdown-item" href="#">This Month</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Test Run ID</th>
+                                <th>Test Suite</th>
+                                <th>Date</th>
+                                <th>Pass Rate</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>TR-1001</td>
+                                <td>Login Functionality</td>
+                                <td>Apr 30, 2025</td>
+                                <td>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="small">100%</span>
+                                </td>
+                                <td><span class="badge bg-success">Passed</span></td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">View Results</a></li>
+                                            <li><a class="dropdown-item" href="#">Download Report</a></li>
+                                            <li><a class="dropdown-item" href="#">Rerun Tests</a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>TR-1000</td>
+                                <td>User Registration</td>
+                                <td>Apr 29, 2025</td>
+                                <td>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-warning" role="progressbar" style="width: 85%;" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="small">85%</span>
+                                </td>
+                                <td><span class="badge bg-warning text-dark">Partial</span></td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">View Results</a></li>
+                                            <li><a class="dropdown-item" href="#">Download Report</a></li>
+                                            <li><a class="dropdown-item" href="#">Analyze Failures</a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>TR-999</td>
+                                <td>Payment Processing</td>
+                                <td>Apr 28, 2025</td>
+                                <td>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 60%;" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="small">60%</span>
+                                </td>
+                                <td><span class="badge bg-danger">Failed</span></td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">View Results</a></li>
+                                            <li><a class="dropdown-item" href="#">Download Report</a></li>
+                                            <li><a class="dropdown-item" href="#">Analyze Failures</a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent text-end">
+                <a href="#" class="btn btn-sm btn-primary">View All Test Runs</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions & Recent Defects Row -->
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-lg-5 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'ui_components:requirements' %}" class="btn btn-outline-primary d-flex align-items-center">
+                        <i class="fas fa-clipboard-list me-3 fa-fw"></i>
+                        <span class="text-start">
+                            <span class="d-block fw-bold">Generate Tests from Requirements</span>
+                            <small class="text-muted">Create test cases from user stories</small>
+                        </span>
+                    </a>
+                    <a href="{% url 'ui_components:test_repository' %}" class="btn btn-outline-secondary d-flex align-items-center">
+                        <i class="fas fa-search me-3 fa-fw"></i>
+                        <span class="text-start">
+                            <span class="d-block fw-bold">Review Existing Test Case</span>
+                            <small class="text-muted">Browse and analyze test repository</small>
+                        </span>
+                    </a>
+                    <a href="{% url 'ui_components:test_execution' %}" class="btn btn-outline-success d-flex align-items-center">
+                        <i class="fas fa-play me-3 fa-fw"></i>
+                        <span class="text-start">
+                            <span class="d-block fw-bold">Execute Tests</span>
+                            <small class="text-muted">Run manual or automated tests</small>
+                        </span>
+                    </a>
+                    <a href="{% url 'ui_components:analysis' %}" class="btn btn-outline-danger d-flex align-items-center">
+                        <i class="fas fa-bug me-3 fa-fw"></i>
+                        <span class="text-start">
+                            <span class="d-block fw-bold">Analyze Failed Test</span>
+                            <small class="text-muted">Diagnose and fix test failures</small>
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Defects -->
+    <div class="col-lg-7 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Recent Defects</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="defectDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        All Statuses
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="defectDropdown">
+                        <li><a class="dropdown-item" href="#">All Statuses</a></li>
+                        <li><a class="dropdown-item" href="#">Open</a></li>
+                        <li><a class="dropdown-item" href="#">In Progress</a></li>
+                        <li><a class="dropdown-item" href="#">Resolved</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">DEF-123: Payment gateway timeout</h6>
+                            <small class="text-danger">High</small>
+                        </div>
+                        <p class="mb-1 small text-truncate">Payment gateway times out after 5 seconds during checkout process</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Assigned to: John Doe</small>
+                            <span class="badge bg-danger">Open</span>
+                        </div>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">DEF-122: Login fails with special characters</h6>
+                            <small class="text-warning">Medium</small>
+                        </div>
+                        <p class="mb-1 small text-truncate">Users with special characters in username cannot login</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Assigned to: Jane Smith</small>
+                            <span class="badge bg-warning text-dark">In Progress</span>
+                        </div>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">DEF-121: Incorrect total calculation</h6>
+                            <small class="text-info">Low</small>
+                        </div>
+                        <p class="mb-1 small text-truncate">Cart total calculation incorrect when applying discounts</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Assigned to: Mike Johnson</small>
+                            <span class="badge bg-info text-dark">Under Review</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent text-end">
+                <a href="#" class="btn btn-sm btn-primary">View All Defects</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

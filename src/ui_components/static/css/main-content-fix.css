@@ -1,0 +1,56 @@
+/* Adjusted main content positioning */
+.main-content {
+    margin-left: var(--sidebar-width);
+    padding-top: calc(var(--header-height) + 1rem);
+    padding-bottom: var(--footer-height);
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+    width: calc(100% - var(--sidebar-width));
+    position: absolute;
+    left: 0;
+}
+
+.sidebar-collapsed .main-content {
+    margin-left: var(--sidebar-collapsed-width);
+    width: calc(100% - var(--sidebar-collapsed-width));
+}
+
+.content-wrapper {
+    max-width: 1200px;  /* Optional: Add max-width to prevent overly wide layouts */
+    margin: 0 auto;     /* Center the content */
+    padding: 0 1rem;    /* Add some horizontal padding */
+}
+
+/* Responsive adjustments */
+@media (max-width: 991.98px) {
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* Ensure full height and proper scrolling */
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+}
+
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Additional fix for content positioning */
+.content-body {
+    padding-bottom: 2rem;
+    width: 100%;
+}
+
+.container-fluid {
+    padding-right: 15px;
+    padding-left: 15px;
+    margin-right: auto;
+    margin-left: auto;
+}

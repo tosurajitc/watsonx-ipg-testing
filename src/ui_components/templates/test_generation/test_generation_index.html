@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Test Generation & Refinement{% endblock %}
+
+{% block content_title %}Test Generation & Refinement{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'ui_components:dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Test Generation & Refinement</li>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/test_generation/test_generation.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="test-generation-container">
+  <!-- Tabs for different functionalities -->
+  <ul class="nav nav-tabs" id="testGenerationTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate" type="button" role="tab" aria-controls="generate" aria-selected="true">
+        <i class="fas fa-flask"></i> Generate Detailed Test Cases
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="refine-tab" data-bs-toggle="tab" data-bs-target="#refine" type="button" role="tab" aria-controls="refine" aria-selected="false">
+        <i class="fas fa-edit"></i> Review & Refine Test Case
+      </button>
+    </li>
+  </ul>
+  
+  <!-- Tab content -->
+  <div class="tab-content" id="testGenerationTabsContent">
+    <!-- Generate Detailed Test Cases Tab -->
+    <div class="tab-pane fade show active" id="generate" role="tabpanel" aria-labelledby="generate-tab">
+      <div class="card">
+        <div class="card-header">
+          <h4>Generate Detailed Test Cases</h4>
+          <p class="text-muted">Create comprehensive test cases from requirements or direct input.</p>
+        </div>
+        <div class="card-body">
+          <form id="generateTestCaseForm" method="post" action="">
+            {% csrf_token %}
+            
+            <!-- Input Selection -->
+            <div class="form-section">
+              <h5>Input Source</h5>
+              <div class="form-group">
+                <div class="input-source-selection">
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="inputSource" id="sourceRequirements" value="requirements" checked>
+                    <label class="form-check-label" for="sourceRequirements">From Processed Requirements</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="inputSource" id="sourcePrompt" value="prompt">
+                    <label class="form-check-label" for="sourcePrompt">Direct Prompt/Keywords</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Processed Requirements Section -->
+            <div class="form-section" id="requirementsSection">
+              <div id="processedRequirementsStatus" class="alert alert-info">
+                <div class="d-flex align-items-center">
+                  <div class="me-3">
+                    <i class="fas fa-info-circle fa-lg"></i>
+                  </div>
+                  <div>
+                    <span class="status-text">Loading processed requirements...</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div id="processedRequirementsContent" class="hidden">
+                <h5>Processed Requirements</h5>
+                <div class="requirements-summary mb-3">
+                  <span id="requirementsCount" class="badge bg-primary me-2">0</span> requirements found
+                  <button type="button" id="viewRequirementsBtn" class="btn btn-sm btn-outline-primary ms-2">
+                    <i class="fas fa-eye"></i> View Details
+                  </button>
+                </div>
+                
+                <div class="form-check mb-3">
+                  <input class="form-check-input" type="checkbox" id="useAllRequirements" name="useAllRequirements" checked>
+                  <label class="form-check-label" for="useAllRequirements">
+                    Use all processed requirements
+                  </label>
+                </div>
+                
+                <div id="requirementsSelectionSection" class="hidden">
+                  <div class="form-group">
+                    <label for="requirementSelect" class="form-label">Select specific requirements</label>
+                    <select class="form-select" id="requirementSelect" name="requirementId" multiple>
+                      <!-- Will be populated dynamically via JavaScript -->
+                    </select>
+                    <div class="form-text">Select one or more requirements from which to generate test cases.</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div id="noRequirementsContent" class="hidden">
+                <div class="alert alert-warning">
+                  <div class="d-flex align-items-center">
+                    <div class="me-3">
+                      <i class="fas fa-exclamation-triangle fa-lg"></i>
+                    </div>
+                    <div>
+                      <p class="mb-2"><strong>No processed requirements found.</strong></p>
+                      <p class="mb-0">Please go to the <a href="{% url 'ui_components:requirements' %}">Requirements</a> section first to process requirements, or use the "Direct Prompt/Keywords" option.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Direct Prompt Input -->
+            <div class="form-section hidden" id="promptSection">
+              <h5>Enter Prompt or Keywords</h5>
+              <div class="form-group">
+                <textarea class="form-control" id="promptInput" name="prompt" rows="4" placeholder="Example: Generate login tests for admin user with valid and invalid credentials, including edge cases"></textarea>
+                <div class="form-text">Describe the functionality you want to test as specifically as possible.</div>
+              </div>
+            </div>
+            
+            <!-- Configuration Options -->
+            <div class="form-section">
+              <h5>Configuration</h5>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="detailLevel" class="form-label">Level of Detail</label>
+                    <select class="form-select" id="detailLevel" name="detailLevel">
+                      <option value="high">High (Comprehensive steps & validations)</option>
+                      <option value="medium" selected>Medium (Standard detail)</option>
+                      <option value="low">Low (Basic steps only)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="includeEdgeCases" class="form-label">Edge Cases</label>
+                    <select class="form-select" id="includeEdgeCases" name="includeEdgeCases">
+                      <option value="include" selected>Include edge cases</option>
+                      <option value="exclude">Exclude edge cases</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="form-actions">
+              <button type="button" id="generateTestCaseBtn" class="btn btn-primary">
+                <i class="fas fa-cogs"></i> Generate Test Cases
+              </button>
+              <button type="button" id="cancelGenerateBtn" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+              </button>
+            </div>
+          </form>
+          
+          <!-- Progress Indicator (initially hidden) -->
+          <div id="generationProgress" class="generation-progress hidden">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+            </div>
+            <p class="progress-status">Generating test cases... This may take a few moments.</p>
+          </div>
+          
+          <!-- Output Area (initially hidden) -->
+          <div id="generationOutput" class="generation-output hidden">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Generated Test Cases</h5>
+                <div class="actions">
+                  <button type="button" id="exportExcelBtn" class="btn btn-sm btn-success">
+                    <i class="fas fa-file-excel"></i> Export to Excel
+                  </button>
+                  <button type="button" id="compareRepoBtn" class="btn btn-sm btn-info">
+                    <i class="fas fa-code-branch"></i> Compare with Repository
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div id="testCasePreview" class="test-case-preview">
+                  <!-- Test case preview will be displayed here -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Review & Refine Test Case Tab -->
+    <div class="tab-pane fade" id="refine" role="tabpanel" aria-labelledby="refine-tab">
+      <div class="card">
+        <div class="card-header">
+          <h4>Review & Refine Test Case</h4>
+          <p class="text-muted">Analyze and enhance existing test cases with AI suggestions.</p>
+        </div>
+        <div class="card-body">
+          <form id="refineTestCaseForm" method="post" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- File Upload Area -->
+            <div class="form-section">
+              <h5>Upload Test Case</h5>
+              <div class="file-upload-container">
+                <div id="refinement-drop-area" class="file-upload-area">
+                  <i class="fas fa-upload fa-2x"></i>
+                  <span class="upload-text">Drag & drop a test case file here or click to browse</span>
+                  <span class="upload-hint">Supported formats: Excel, Word</span>
+                  
+                  <input type="file" name="test_case_file" id="test_case_file" class="hidden-file-input" 
+                       accept=".doc,.docx,.xls,.xlsx" required>
+                </div>
+                
+                <div id="refinement-file-preview" class="file-preview hidden">
+                  <i class="fas fa-file"></i>
+                  <div class="file-info">
+                    <span id="refinement-file-name" class="file-name"></span>
+                    <span id="refinement-file-size" class="file-size"></span>
+                  </div>
+                  <button type="button" id="refinement-remove-file" class="remove-file-btn">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="form-actions">
+              <button type="button" id="analyzeTestCaseBtn" class="btn btn-primary">
+                <i class="fas fa-search"></i> Analyze & Suggest Refinements
+              </button>
+              <button type="button" id="cancelRefineBtn" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+              </button>
+            </div>
+          </form>
+          
+          <!-- Progress Indicator (initially hidden) -->
+          <div id="refinementProgress" class="refinement-progress hidden">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+            </div>
+            <p class="progress-status">Analyzing test case... This may take a few moments.</p>
+          </div>
+          
+          <!-- Comparison View (initially hidden) -->
+          <div id="refinementComparison" class="refinement-comparison hidden">
+            <div class="card">
+              <div class="card-header">
+                <h5>Refinement Suggestions</h5>
+              </div>
+              <div class="card-body">
+                <div class="comparison-container">
+                  <!-- Side-by-side comparison will be displayed here -->
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="original-test-case">
+                        <h5>Original Test Case</h5>
+                        <div id="originalTestCase" class="test-case-content">
+                          <!-- Original test case content -->
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="refined-test-case">
+                        <h5>Suggested Refinements</h5>
+                        <div id="refinedTestCase" class="test-case-content">
+                          <!-- Refined test case content -->
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- AI Suggestions Box -->
+                  <div class="ai-suggestions">
+                    <h5>AI Analysis & Recommendations</h5>
+                    <div id="aiSuggestions" class="ai-suggestions-content">
+                      <!-- AI suggestions will be displayed here -->
+                    </div>
+                  </div>
+                  
+                  <!-- Action Buttons -->
+                  <div class="refinement-actions">
+                    <button type="button" id="acceptSuggestionsBtn" class="btn btn-success">
+                      <i class="fas fa-check"></i> Accept Suggestions & Update Repository
+                    </button>
+                    <button type="button" id="notifyOwnerBtn" class="btn btn-info">
+                      <i class="fas fa-bell"></i> Notify Owner of Suggestions
+                    </button>
+                    <button type="button" id="markObsoleteBtn" class="btn btn-warning">
+                      <i class="fas fa-archive"></i> Mark as Obsolete
+                    </button>
+                    <button type="button" id="discardSuggestionsBtn" class="btn btn-secondary">
+                      <i class="fas fa-trash"></i> Discard Suggestions
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Requirements Details Modal -->
+<div class="modal fade" id="requirementsModal" tabindex="-1" aria-labelledby="requirementsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="requirementsModalLabel">Processed Requirements Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="requirementsDetailsList">
+          <!-- Requirements will be displayed here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/test_generation/ui_utils.js' %}"></script>
+<script src="{% static 'js/test_generation/api_service.js' %}"></script>
+<script src="{% static 'js/test_generation/generate_test_cases.js' %}"></script>
+<script src="{% static 'js/test_generation/refine_test_cases.js' %}"></script>
+<script src="{% static 'js/test_generation/test_generation_main.js' %}"></script>
+{% endblock %}
