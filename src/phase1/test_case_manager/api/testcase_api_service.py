@@ -21,6 +21,11 @@ from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS
 import pandas as pd
 import tempfile
+import uuid
+from docx import Document
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
 
 # Import from src.common
 from src.common.logging.log_utils import setup_logger
@@ -1074,6 +1079,331 @@ def import_metadata() -> Tuple[Dict[str, Any], int]:
         
     except Exception as e:
         return handle_error(e)
+
+
+
+
+
+
+
+
+# Add a route to fetch processed requirements
+@app.route('/api/requirements/processed', methods=['GET'])
+def get_processed_requirements():
+    """
+    Get processed requirements from the system.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Requirements data and HTTP status code.
+    """
+    try:
+        # In a real implementation, this would fetch from a database or the LLM test scenario generator
+        # For now, we'll return mock data for demonstration
+        
+        # Fetch from llm_test_scenario_generator module if available
+        try:
+            from src.phase1.llm_test_scenario_generator.scenario_generator  import ScenarioGenerator
+            scenario_generator = ScenarioGenerator()
+            requirements = []
+        except (ImportError, AttributeError):
+            # Fallback to mock data if the module is not available
+            requirements = [
+                {
+                    "id": "REQ-001",
+                    "title": "User Authentication",
+                    "description": "The system shall provide user authentication functionality",
+                    "source": "JIRA",
+                    "status": "Processed",
+                    "priority": "High"
+                },
+                {
+                    "id": "REQ-002",
+                    "title": "Password Reset",
+                    "description": "Users shall be able to reset their passwords",
+                    "source": "JIRA",
+                    "status": "Processed",
+                    "priority": "Medium"
+                }
+            ]
+        
+        return {
+            "status": "success",
+            "data": {
+                "requirements": requirements
+            }
+        }, 200
+    except Exception as e:
+        return handle_error(e)
+
+# Add route for generating test cases for download in different formats
+@app.route('/api/test-cases/generate-download', methods=['POST'])
+def generate_test_cases_download():
+    """
+    Generate test cases for download in specified format.
+    
+    Request body:
+        - scenarios (List[Dict]): Test scenarios
+        - format (str): Output format (excel, word, pdf)
+        
+    Returns:
+        Response: File download response.
+    """
+    try:
+        # Get request data
+        request_data = request.json
+        
+        if not request_data or 'scenarios' not in request_data:
+            return {"status": "error", "message": "Missing scenarios data"}, 400
+        
+        scenarios = request_data['scenarios']
+        output_format = request_data.get('format', 'excel').lower()
+        
+        # Generate test cases
+        test_cases = {}
+        for scenario in scenarios:
+            try:
+                test_case_df = test_case_generator.generate_test_case_from_scenario(scenario)
+                test_cases[scenario.get('id', str(uuid.uuid4()))] = test_case_df
+            except Exception as scenario_error:
+                logger.error(f"Error generating test case for scenario {scenario.get('id', 'unknown')}: {str(scenario_error)}")
+                # Continue with other scenarios
+        
+        if not test_cases:
+            return {"status": "error", "message": "Failed to generate any test cases"}, 500
+        
+        # Create temp file for output
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{output_format}') as temp_file:
+            temp_path = temp_file.name
+        
+        # Save to appropriate format
+        if output_format == 'excel' or output_format == 'xlsx':
+            # Save to Excel
+            with pd.ExcelWriter(temp_path) as writer:
+                for scenario_id, test_case_df in test_cases.items():
+                    # Truncate scenario_id to avoid Excel sheet name limit
+                    sheet_name = f"TC_{scenario_id}"
+                    if len(sheet_name) > 31:  # Excel sheet name limit is 31 chars
+                        sheet_name = sheet_name[:31]
+                    test_case_df.to_excel(writer, sheet_name=sheet_name, index=False)
+            
+            # Return the file
+            return send_file(
+                temp_path,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            )
+        elif output_format == 'word' or output_format == 'docx':
+            # Create Word document using python-docx
+            document = Document()
+            
+            for scenario_id, test_case_df in test_cases.items():
+                # Get basic test case info from first row
+                if len(test_case_df) > 0:
+                    first_row = test_case_df.iloc[0]
+                    title = first_row.get('TEST CASE', 'Test Case')
+                    test_case_id = first_row.get('TEST CASE NUMBER', scenario_id)
+                    subject = first_row.get('SUBJECT', 'Unknown')
+                else:
+                    title = 'Test Case'
+                    test_case_id = scenario_id
+                    subject = 'Unknown'
+                
+                # Add test case header
+                document.add_heading(f"{title} ({test_case_id})", level=1)
+                document.add_paragraph(f"Subject: {subject}")
+                
+                # Add test steps table
+                table = document.add_table(rows=1, cols=4)
+                table.style = 'Table Grid'
+                
+                # Add header row
+                header_cells = table.rows[0].cells
+                header_cells[0].text = 'Step'
+                header_cells[1].text = 'Description'
+                header_cells[2].text = 'Test Data'
+                header_cells[3].text = 'Expected Result'
+                
+                # Add steps
+                for _, row in test_case_df.iterrows():
+                    new_row = table.add_row().cells
+                    new_row[0].text = str(row.get('STEP NO', ''))
+                    new_row[1].text = str(row.get('TEST STEP DESCRIPTION', ''))
+                    new_row[2].text = str(row.get('DATA', ''))
+                    new_row[3].text = str(row.get('EXPECTED RESULT', ''))
+                
+                # Add page break between test cases
+                document.add_page_break()
+            
+            # Save document
+            document.save(temp_path)
+            
+            # Return the file
+            return send_file(
+                temp_path,
+                mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                as_attachment=True,
+                download_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+            )
+        elif output_format == 'pdf':
+            # Simple PDF generation using reportlab
+            # Note: In a real implementation, you might want to use a more sophisticated PDF library
+            c = canvas.Canvas(temp_path, pagesize=letter)
+            page_width, page_height = letter
+            margin = 50
+            y_position = page_height - margin
+            
+            for scenario_id, test_case_df in test_cases.items():
+                # Get basic test case info from first row
+                if len(test_case_df) > 0:
+                    first_row = test_case_df.iloc[0]
+                    title = first_row.get('TEST CASE', 'Test Case')
+                    test_case_id = first_row.get('TEST CASE NUMBER', scenario_id)
+                    subject = first_row.get('SUBJECT', 'Unknown')
+                else:
+                    title = 'Test Case'
+                    test_case_id = scenario_id
+                    subject = 'Unknown'
+                
+                # Add test case header
+                c.setFont("Helvetica-Bold", 14)
+                c.drawString(margin, y_position, f"{title} ({test_case_id})")
+                y_position -= 20
+                
+                c.setFont("Helvetica", 10)
+                c.drawString(margin, y_position, f"Subject: {subject}")
+                y_position -= 30
+                
+                # Add table header
+                c.setFont("Helvetica-Bold", 10)
+                c.drawString(margin, y_position, "Step")
+                c.drawString(margin + 40, y_position, "Description")
+                c.drawString(margin + 250, y_position, "Test Data")
+                c.drawString(margin + 350, y_position, "Expected Result")
+                y_position -= 15
+                
+                c.line(margin, y_position, page_width - margin, y_position)
+                y_position -= 15
+                
+                # Add steps
+                c.setFont("Helvetica", 10)
+                for _, row in test_case_df.iterrows():
+                    step_no = str(row.get('STEP NO', ''))
+                    description = str(row.get('TEST STEP DESCRIPTION', ''))
+                    data = str(row.get('DATA', ''))
+                    expected = str(row.get('EXPECTED RESULT', ''))
+                    
+                    # Check if we need a new page
+                    if y_position < margin + 20:
+                        c.showPage()
+                        y_position = page_height - margin
+                        
+                        # Add table header on new page
+                        c.setFont("Helvetica-Bold", 10)
+                        c.drawString(margin, y_position, "Step")
+                        c.drawString(margin + 40, y_position, "Description")
+                        c.drawString(margin + 250, y_position, "Test Data")
+                        c.drawString(margin + 350, y_position, "Expected Result")
+                        y_position -= 15
+                        
+                        c.line(margin, y_position, page_width - margin, y_position)
+                        y_position -= 15
+                        c.setFont("Helvetica", 10)
+                    
+                    # Add step
+                    c.drawString(margin, y_position, step_no)
+                    
+                    # Handle multiline text
+                    # This is a simplified approach; a real implementation would need
+                    # more sophisticated text wrapping
+                    wrapped_description = []
+                    for i in range(0, len(description), 30):
+                        wrapped_description.append(description[i:i+30])
+                    
+                    for i, line in enumerate(wrapped_description):
+                        if i == 0:
+                            c.drawString(margin + 40, y_position, line)
+                        else:
+                            y_position -= 12
+                            c.drawString(margin + 40, y_position, line)
+                    
+                    c.drawString(margin + 250, y_position, data[:20])
+                    c.drawString(margin + 350, y_position, expected[:20])
+                    
+                    y_position -= 20
+                
+                # Add page break between test cases
+                c.showPage()
+                y_position = page_height - margin
+            
+            # Save PDF
+            c.save()
+            
+            # Return the file
+            return send_file(
+                temp_path,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=f"test_cases_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            )
+        else:
+            return {"status": "error", "message": f"Unsupported format: {output_format}"}, 400
+            
+    except Exception as e:
+        # Clean up temp file if it exists
+        if 'temp_path' in locals() and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except:
+                pass
+                
+        return handle_error(e)
+
+# Helper function to convert test case DataFrame to scenario object
+def convert_test_case_to_scenario(test_case_df):
+    """
+    Convert a test case DataFrame to a scenario object
+    
+    Args:
+        test_case_df (pd.DataFrame): Test case DataFrame
+        
+    Returns:
+        Dict: Scenario object
+    """
+    if len(test_case_df) == 0:
+        return None
+        
+    # Extract basic info from first row
+    first_row = test_case_df.iloc[0]
+    
+    scenario = {
+        "id": first_row.get("TEST CASE NUMBER", f"TC-{uuid.uuid4().hex[:8].upper()}"),
+        "name": first_row.get("TEST CASE", "Test Case"),
+        "subject": first_row.get("SUBJECT", "Unknown"),
+        "type": first_row.get("TYPE", "Functional"),
+        "steps": []
+    }
+    
+    # Extract steps
+    for _, row in test_case_df.iterrows():
+        step = {
+            "description": row.get("TEST STEP DESCRIPTION", ""),
+            "data": row.get("DATA", ""),
+            "reference_values": row.get("REFERENCE VALUES", ""),
+            "values": row.get("VALUES", ""),
+            "expected_result": row.get("EXPECTED RESULT", ""),
+            "trans_code": row.get("TRANS CODE", ""),
+            "test_user": row.get("TEST USER ID/ROLE", "")
+        }
+        scenario["steps"].append(step)
+        
+    return scenario
+
+
+
+
+
+
 
 # Initialize components when module is loaded
 initialize_components()

@@ -1,381 +1,275 @@
 /**
  * Test Generation & Refinement - Main Module
  * 
- * This module serves as the entry point for the Test Generation & Refinement functionality.
- * It handles initialization, tab management, and orchestrates the interaction between
- * the different sub-modules for generating and refining test cases.
+ * This is the main entry point that initializes all sub-modules
+ * and handles tab switching and common functionality.
  */
 
-// Create namespace for Test Generation modules
-const TestGeneration = TestGeneration || {};
+// Create namespace if it doesn't exist
+var TestGeneration = TestGeneration || {};
 
 /**
- * Main module with initialization and coordination functionality
+ * Main module for test generation and refinement functionality
  */
 TestGeneration.Main = (function() {
     // Private variables
+    let activeTab = 'generate'; // Default tab
     let initialized = false;
-    let activeTab = 'generate'; // Default active tab
-
+    
     /**
-     * Initialize the Test Generation module
+     * Initialize the Test Generation & Refinement module
      * @public
      */
     function initialize() {
-        if (initialized) return;
-
-        console.log('Initializing Test Generation & Refinement module...');
+        if (initialized) {
+            console.log('Test Generation & Refinement Main module already initialized');
+            return;
+        }
         
-        // Initialize UI utilities
-        TestGeneration.UIUtils.initialize();
+        console.log('Initializing Test Generation & Refinement Main module...');
         
-        // Initialize API service
-        TestGeneration.API.initialize();
+        // Set up tab switching
+        setupTabSwitching();
         
-        // Register DOM event listeners
-        setupEventListeners();
+        // Initialize sub-modules based on active tab
+        initializeActiveModule();
         
-        // Initialize the active tab based on URL or default
-        initializeActiveTab();
+        // Handle window resize
+        window.addEventListener('resize', handleResize);
         
         // Set initialization flag
         initialized = true;
         
-        console.log('Test Generation & Refinement module initialized');
+        console.log('Test Generation & Refinement Main module initialized');
     }
-
+    
     /**
-     * Set up event listeners for the main module
+     * Set up tab switching functionality
      * @private
      */
-    function setupEventListeners() {
-        // Tab switching event listeners
-        const testGenerationTabs = document.getElementById('testGenerationTabs');
-        if (testGenerationTabs) {
-            const tabs = testGenerationTabs.querySelectorAll('[data-bs-toggle="tab"]');
-            
-            tabs.forEach(tab => {
-                tab.addEventListener('shown.bs.tab', function(event) {
-                    handleTabChange(event.target.id);
-                });
+    function setupTabSwitching() {
+        // Find tab buttons
+        const generateTab = document.getElementById('generate-tab');
+        const refineTab = document.getElementById('refine-tab');
+        
+        if (generateTab && refineTab) {
+            // Check current window URL to determine active tab
+            if (window.location.href.includes('#refine')) {
+                setActiveTab('refine');
+                // Update UI to match
+                generateTab.classList.remove('active');
+                generateTab.setAttribute('aria-selected', 'false');
+                refineTab.classList.add('active');
+                refineTab.setAttribute('aria-selected', 'true');
                 
-                // Also add click event to ensure tab change is captured even without Bootstrap
-                tab.addEventListener('click', function() {
-                    const tabId = this.id;
-                    if (!tabId.endsWith('-tab')) return;
-                    
-                    const contentId = tabId.replace('-tab', '');
-                    showTabContent(contentId);
-                    handleTabChange(tabId);
-                });
-            });
-        }
-        
-        // Window resize event for responsive adjustments
-        window.addEventListener('resize', handleWindowResize);
-        
-        // Handle beforeunload to warn about unsaved changes
-        window.addEventListener('beforeunload', function(event) {
-            if (hasUnsavedChanges()) {
-                const message = 'You have unsaved changes. Are you sure you want to leave?';
-                event.returnValue = message; // Standard for most browsers
-                return message; // For older browsers
+                // Show refine tab content
+                const generateContent = document.getElementById('generate');
+                const refineContent = document.getElementById('refine');
+                
+                if (generateContent && refineContent) {
+                    generateContent.classList.remove('show', 'active');
+                    refineContent.classList.add('show', 'active');
+                }
             }
-        });
-    }
-
-    /**
-     * Show tab content and hide others
-     * @param {string} tabId - ID of the tab to show (without '-tab' suffix)
-     * @private
-     */
-    function showTabContent(tabId) {
-        // Find all tab panes
-        const tabPanes = document.querySelectorAll('.tab-pane');
-        
-        // Hide all tab panes
-        tabPanes.forEach(pane => {
-            pane.classList.remove('show', 'active');
-        });
-        
-        // Show the selected tab pane
-        const selectedPane = document.getElementById(tabId);
-        if (selectedPane) {
-            selectedPane.classList.add('show', 'active');
-        }
-        
-        // Update active tab buttons
-        const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
-        tabButtons.forEach(button => {
-            button.classList.remove('active');
-            button.setAttribute('aria-selected', 'false');
-        });
-        
-        const activeButton = document.getElementById(`${tabId}-tab`);
-        if (activeButton) {
-            activeButton.classList.add('active');
-            activeButton.setAttribute('aria-selected', 'true');
+            
+            // Add click event listeners
+            generateTab.addEventListener('click', function() {
+                setActiveTab('generate');
+            });
+            
+            refineTab.addEventListener('click', function() {
+                setActiveTab('refine');
+            });
+            
+            console.log('Tab switching event listeners set up');
+        } else {
+            console.warn('Tab buttons not found in the DOM');
         }
     }
-
+    
     /**
-     * Handle tab change event
-     * @param {string} tabId - ID of the active tab
+     * Set the active tab
+     * @param {string} tabName - Name of the tab to activate
      * @private
      */
-    function handleTabChange(tabId) {
-        // Extract tab name without "-tab" suffix
-        const tabName = tabId.replace('-tab', '');
-        
-        // Store current active tab
+    function setActiveTab(tabName) {
+        console.log('Setting active tab to:', tabName);
         activeTab = tabName;
         
-        // Reset forms when switching tabs
-        resetForms(tabName);
+        // Update URL hash
+        window.location.hash = tabName;
         
-        // Initialize the specific tab functionality
-        if (tabName === 'generate') {
-            TestGeneration.Generate.initialize();
-        } else if (tabName === 'refine') {
-            TestGeneration.Refine.initialize();
-        }
-        
-        // Update URL hash to persist tab selection
-        window.history.replaceState(null, null, `#${tabName}`);
-        
-        console.log(`Switched to ${tabName} tab`);
+        // Initialize the appropriate module
+        initializeActiveModule();
     }
-
+    
     /**
-     * Initialize the active tab based on URL hash or default
+     * Initialize the currently active module
      * @private
      */
-    function initializeActiveTab() {
-        let targetTab = 'generate'; // Default tab
-        
-        // Check URL hash for tab selection
-        const hash = window.location.hash.substring(1);
-        if (hash === 'generate' || hash === 'refine') {
-            targetTab = hash;
-        }
-        
-        // Activate the target tab
-        const tabElement = document.getElementById(`${targetTab}-tab`);
-        if (tabElement) {
-            // If Bootstrap's tab is available, use it
-            if (typeof bootstrap !== 'undefined') {
-                const tab = new bootstrap.Tab(tabElement);
-                tab.show();
+    function initializeActiveModule() {
+        if (activeTab === 'generate') {
+            // Initialize Generate module if it exists
+            if (TestGeneration.Generate && typeof TestGeneration.Generate.initialize === 'function') {
+                console.log('Initializing Generate module');
+                TestGeneration.Generate.initialize();
             } else {
-                // Manual tab activation
-                showTabContent(targetTab);
-                handleTabChange(`${targetTab}-tab`);
+                console.log('Generate module not found or not properly defined');
+            }
+        } else if (activeTab === 'refine') {
+            // Initialize Refine module if it exists
+            if (TestGeneration.Refine && typeof TestGeneration.Refine.initialize === 'function') {
+                console.log('Initializing Refine module');
+                TestGeneration.Refine.initialize();
+            } else {
+                console.log('Refine module not found or not properly defined');
             }
         }
     }
-
-    /**
-     * Reset forms when switching tabs
-     * @param {string} currentTab - Current active tab
-     * @private
-     */
-    function resetForms(currentTab) {
-        if (currentTab === 'generate') {
-            // When on generate tab, reset refine tab
-            if (TestGeneration.Refine && typeof TestGeneration.Refine.resetForm === 'function') {
-                TestGeneration.Refine.resetForm();
-            }
-        } else if (currentTab === 'refine') {
-            // When on refine tab, reset generate tab
-            if (TestGeneration.Generate && typeof TestGeneration.Generate.resetForm === 'function') {
-                TestGeneration.Generate.resetForm();
-            }
-        }
-    }
-
+    
     /**
      * Handle window resize event
      * @private
      */
-    function handleWindowResize() {
-        // Adjust UI elements based on window size
-        adjustForScreenSize();
-        
-        // Notify sub-modules about resize
-        if (activeTab === 'generate' && TestGeneration.Generate) {
-            TestGeneration.Generate.handleResize();
-        } else if (activeTab === 'refine' && TestGeneration.Refine) {
-            TestGeneration.Refine.handleResize();
-        }
-    }
-
-    /**
-     * Adjust UI elements based on screen size
-     * @private
-     */
-    function adjustForScreenSize() {
-        const isMobile = window.innerWidth < 768;
-        
-        // Adjust actions button layout
-        const actionButtons = document.querySelectorAll('.form-actions, .refinement-actions');
-        actionButtons.forEach(actionGroup => {
-            if (isMobile) {
-                actionGroup.classList.add('flex-column');
-            } else {
-                actionGroup.classList.remove('flex-column');
-            }
-        });
-        
-        // Adjust comparison view
-        const comparisonContainer = document.querySelector('.comparison-container .row');
-        if (comparisonContainer) {
-            if (isMobile) {
-                comparisonContainer.classList.remove('row');
-                const columns = comparisonContainer.querySelectorAll('.col-md-6');
-                columns.forEach(col => {
-                    col.classList.remove('col-md-6');
-                });
-            } else {
-                if (!comparisonContainer.classList.contains('row')) {
-                    comparisonContainer.classList.add('row');
-                    const containers = comparisonContainer.children;
-                    for (let i = 0; i < containers.length; i++) {
-                        if (!containers[i].classList.contains('col-md-6')) {
-                            containers[i].classList.add('col-md-6');
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Check if there are unsaved changes
-     * @returns {boolean} True if there are unsaved changes
-     * @private
-     */
-    function hasUnsavedChanges() {
+    function handleResize() {
         if (activeTab === 'generate') {
-            return TestGeneration.Generate && 
-                   typeof TestGeneration.Generate.hasUnsavedChanges === 'function' && 
-                   TestGeneration.Generate.hasUnsavedChanges();
+            // Call Generate module's resize handler if it exists
+            if (TestGeneration.Generate && typeof TestGeneration.Generate.handleResize === 'function') {
+                TestGeneration.Generate.handleResize();
+            }
         } else if (activeTab === 'refine') {
-            return TestGeneration.Refine && 
-                   typeof TestGeneration.Refine.hasUnsavedChanges === 'function' && 
-                   TestGeneration.Refine.hasUnsavedChanges();
-        }
-        
-        return false;
-    }
-
-    /**
-     * Show the loading spinner
-     * @param {string} tabId - ID of the tab containing the spinner
-     * @param {string} [message] - Optional message to display with the spinner
-     * @public
-     */
-    function showLoadingSpinner(tabId, message) {
-        const loadingElement = document.getElementById(`${tabId}Progress`);
-        if (loadingElement) {
-            loadingElement.classList.remove('hidden');
-            
-            if (message) {
-                const statusElement = loadingElement.querySelector('.progress-status');
-                if (statusElement) {
-                    statusElement.textContent = message;
-                }
+            // Call Refine module's resize handler if it exists
+            if (TestGeneration.Refine && typeof TestGeneration.Refine.handleResize === 'function') {
+                TestGeneration.Refine.handleResize();
             }
         }
     }
-
+    
     /**
-     * Hide the loading spinner
-     * @param {string} tabId - ID of the tab containing the spinner
-     * @public
-     */
-    function hideLoadingSpinner(tabId) {
-        const loadingElement = document.getElementById(`${tabId}Progress`);
-        if (loadingElement) {
-            loadingElement.classList.add('hidden');
-        }
-    }
-
-    /**
-     * Get the current active tab
-     * @returns {string} ID of the active tab
+     * Get the currently active tab
+     * @returns {string} Active tab name
      * @public
      */
     function getActiveTab() {
         return activeTab;
     }
-
+    
     /**
-     * Check if the module has been initialized
-     * @returns {boolean} True if the module has been initialized
+     * Show loading spinner for a specific operation
+     * @param {string} operation - The operation being performed
+     * @param {string} message - Loading message to display
      * @public
      */
-    function isInitialized() {
-        return initialized;
+    function showLoadingSpinner(operation, message) {
+        // Default message if not provided
+        message = message || 'Loading...';
+        
+        // Look for a progress element specific to the operation
+        const progressElement = document.getElementById(operation + 'Progress');
+        
+        if (progressElement) {
+            // Update message if there's a status element
+            const statusElement = progressElement.querySelector('.progress-status');
+            if (statusElement) {
+                statusElement.textContent = message;
+            }
+            
+            // Show the progress element
+            if (progressElement.classList.contains('d-none')) {
+                progressElement.classList.remove('d-none');
+            }
+            progressElement.style.display = 'block';
+        } else {
+            // Create a generic loading spinner if no specific one exists
+            let loadingContainer = document.getElementById('global-loading-container');
+            
+            // Create container if it doesn't exist
+            if (!loadingContainer) {
+                loadingContainer = document.createElement('div');
+                loadingContainer.id = 'global-loading-container';
+                loadingContainer.className = 'loading-container';
+                loadingContainer.style.position = 'fixed';
+                loadingContainer.style.top = '0';
+                loadingContainer.style.left = '0';
+                loadingContainer.style.width = '100%';
+                loadingContainer.style.height = '100%';
+                loadingContainer.style.display = 'flex';
+                loadingContainer.style.justifyContent = 'center';
+                loadingContainer.style.alignItems = 'center';
+                loadingContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                loadingContainer.style.zIndex = '9999';
+                
+                const spinnerWrapper = document.createElement('div');
+                spinnerWrapper.className = 'spinner-wrapper bg-white p-4 rounded';
+                
+                const spinner = document.createElement('div');
+                spinner.className = 'spinner-border text-primary';
+                spinner.setAttribute('role', 'status');
+                
+                const spinnerText = document.createElement('span');
+                spinnerText.className = 'sr-only';
+                spinnerText.textContent = 'Loading...';
+                spinner.appendChild(spinnerText);
+                
+                const messageElement = document.createElement('div');
+                messageElement.className = 'spinner-message mt-2';
+                messageElement.textContent = message;
+                
+                spinnerWrapper.appendChild(spinner);
+                spinnerWrapper.appendChild(messageElement);
+                loadingContainer.appendChild(spinnerWrapper);
+                
+                document.body.appendChild(loadingContainer);
+            } else {
+                // Update existing spinner message
+                const messageElement = loadingContainer.querySelector('.spinner-message');
+                if (messageElement) {
+                    messageElement.textContent = message;
+                }
+                
+                // Show the container
+                loadingContainer.style.display = 'flex';
+            }
+        }
     }
-
-    // Initialize the module when the DOM is loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        initialize();
-    });
-
+    
+    /**
+     * Hide loading spinner for a specific operation
+     * @param {string} operation - The operation being performed
+     * @public
+     */
+    function hideLoadingSpinner(operation) {
+        // Look for a progress element specific to the operation
+        const progressElement = document.getElementById(operation + 'Progress');
+        
+        if (progressElement) {
+            // Hide the progress element
+            if (!progressElement.classList.contains('d-none')) {
+                progressElement.classList.add('d-none');
+            }
+            progressElement.style.display = 'none';
+        } else {
+            // Hide the generic loading spinner if no specific one exists
+            const loadingContainer = document.getElementById('global-loading-container');
+            if (loadingContainer) {
+                loadingContainer.style.display = 'none';
+            }
+        }
+    }
+    
     // Return public API
     return {
         initialize: initialize,
-        showLoadingSpinner: showLoadingSpinner,
-        hideLoadingSpinner: hideLoadingSpinner,
         getActiveTab: getActiveTab,
-        isInitialized: isInitialized
+        showLoadingSpinner: showLoadingSpinner,
+        hideLoadingSpinner: hideLoadingSpinner
     };
 })();
 
-/**
- * Stub for UIUtils module - to be implemented in ui_utils.js
- * This ensures the main module can reference it before it's loaded
- */
-TestGeneration.UIUtils = TestGeneration.UIUtils || {
-    initialize: function() {
-        console.warn('UIUtils module not loaded yet');
-    }
-};
+// Initialize the main module when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing TestGeneration.Main module...');
+    TestGeneration.Main.initialize();
+});
 
-/**
- * Stub for API module - to be implemented in api_service.js
- */
-TestGeneration.API = TestGeneration.API || {
-    initialize: function() {
-        console.warn('API module not loaded yet');
-    }
-};
-
-/**
- * Stub for Generate module - to be implemented in generate_test_cases.js
- */
-TestGeneration.Generate = TestGeneration.Generate || {
-    initialize: function() {
-        console.warn('Generate module not loaded yet');
-    },
-    resetForm: function() {
-        console.warn('Generate.resetForm not implemented');
-    },
-    handleResize: function() {},
-    hasUnsavedChanges: function() { return false; }
-};
-
-/**
- * Stub for Refine module - to be implemented in refine_test_cases.js
- */
-TestGeneration.Refine = TestGeneration.Refine || {
-    initialize: function() {
-        console.warn('Refine module not loaded yet');
-    },
-    resetForm: function() {
-        console.warn('Refine.resetForm not implemented');
-    },
-    handleResize: function() {},
-    hasUnsavedChanges: function() { return false; }
-};
+console.log('Test Generation Main module loaded successfully');

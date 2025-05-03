@@ -1,409 +1,248 @@
 /**
- * Test Generation & Refinement - API Service Module
+ * API Service Module for the Test Generation & Refinement interface
  * 
- * This module provides a centralized service for making API calls to the backend.
- * It handles standard HTTP methods, error processing, and authentication.
+ * This module provides functions for communicating with the backend API,
+ * handling file uploads, and processing API responses.
  */
 
-// Ensure the TestGeneration namespace exists
-const TestGeneration = TestGeneration || {};
+// Create namespace if it doesn't exist
+var TestGeneration = TestGeneration || {};
 
 /**
- * API service for making backend requests
+ * API service for the Test Generation & Refinement interface
  */
 TestGeneration.API = (function() {
-    // Private variables
-    let initialized = false;
-    let baseUrl = ''; // If API is at a different base URL than the frontend
-    let defaultHeaders = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    };
+    // Base URL for API requests (empty means relative to current URL)
+    const BASE_URL = '';
     
     /**
-     * Initialize the API service
-     * @public
-     */
-    function initialize() {
-        if (initialized) return;
-        
-        console.log('Initializing API Service...');
-        
-        // Set CSRF token for all requests
-        updateCSRFToken();
-        
-        // Set up global AJAX error handler
-        setupGlobalErrorHandler();
-        
-        // Set initialization flag
-        initialized = true;
-        
-        console.log('API Service initialized');
-    }
-    
-    /**
-     * Update the CSRF token in default headers
-     * @private
-     */
-    function updateCSRFToken() {
-        const csrfToken = getCSRFToken();
-        if (csrfToken) {
-            defaultHeaders['X-CSRFToken'] = csrfToken;
-        }
-    }
-    
-    /**
-     * Get CSRF token from cookie
-     * @returns {string|null} CSRF token or null if not found
-     * @private
-     */
-    function getCSRFToken() {
-        const name = 'csrftoken';
-        let cookieValue = null;
-        
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        
-        return cookieValue;
-    }
-    
-    /**
-     * Set up global error handler for AJAX requests
-     * @private
-     */
-    function setupGlobalErrorHandler() {
-        window.addEventListener('unhandledrejection', function(event) {
-            if (event.reason && event.reason.isApiError) {
-                console.error('Unhandled API error:', event.reason);
-                
-                // Show error notification if UIUtils is available
-                if (TestGeneration.UIUtils && typeof TestGeneration.UIUtils.showNotification === 'function') {
-                    TestGeneration.UIUtils.showNotification(
-                        'API Error: ' + (event.reason.message || 'Unknown error'),
-                        'error'
-                    );
-                }
-            }
-        });
-    }
-    
-    /**
-     * Create API error object
-     * @param {Response} response - Fetch API response
-     * @param {string} errorMessage - Error message
-     * @returns {Error} Error object with additional API error properties
-     * @private
-     */
-    function createApiError(response, errorMessage) {
-        const error = new Error(errorMessage || 'API request failed');
-        error.status = response ? response.status : 0;
-        error.statusText = response ? response.statusText : '';
-        error.isApiError = true;
-        return error;
-    }
-    
-    /**
-     * Process API response
-     * @param {Response} response - Fetch API response
-     * @returns {Promise<Object>} Processed response data
-     * @private
-     */
-    async function processResponse(response) {
-        // Update CSRF token from response headers if present
-        const csrfToken = response.headers.get('X-CSRFToken');
-        if (csrfToken) {
-            defaultHeaders['X-CSRFToken'] = csrfToken;
-        }
-        
-        // Check if response is ok (status 200-299)
-        if (!response.ok) {
-            let errorMessage = `API Error: ${response.status} ${response.statusText}`;
-            
-            // Try to parse error response body
-            try {
-                const errorData = await response.json();
-                if (errorData.message) {
-                    errorMessage = errorData.message;
-                } else if (errorData.error && errorData.error.message) {
-                    errorMessage = errorData.error.message;
-                }
-            } catch (e) {
-                // Ignore parsing errors
-            }
-            
-            throw createApiError(response, errorMessage);
-        }
-        
-        // Check content type
-        const contentType = response.headers.get('Content-Type') || '';
-        
-        // Parse response based on content type
-        if (contentType.includes('application/json')) {
-            return response.json();
-        } else if (contentType.includes('text/')) {
-            return response.text();
-        } else {
-            return response;
-        }
-    }
-    
-    /**
-     * Make a GET request
+     * Make a GET request to the API
      * @param {string} url - API endpoint URL
-     * @param {Object} [params=null] - Query parameters
-     * @param {Object} [options={}] - Additional fetch options
-     * @returns {Promise<Object>} Response data
-     * @public
+     * @param {Object} params - URL parameters (optional)
+     * @returns {Promise} Promise resolving to the API response
      */
-    function get(url, params = null, options = {}) {
-        // Build URL with query parameters
-        let requestUrl = baseUrl + url;
+    function get(url, params) {
+        // Add query parameters if provided
+        let queryUrl = url;
         if (params) {
-            const queryString = new URLSearchParams(params).toString();
-            requestUrl += (url.includes('?') ? '&' : '?') + queryString;
-        }
-        
-        // Merge headers
-        const headers = { ...defaultHeaders, ...options.headers };
-        
-        // Make the request
-        return fetch(requestUrl, {
-            method: 'GET',
-            headers,
-            credentials: 'same-origin',
-            ...options
-        })
-        .then(processResponse)
-        .catch(error => {
-            console.error(`GET ${url} failed:`, error);
-            throw error.isApiError ? error : createApiError(null, error.message);
-        });
-    }
-    
-    /**
-     * Make a POST request with JSON data
-     * @param {string} url - API endpoint URL
-     * @param {Object} data - Request body data
-     * @param {Object} [options={}] - Additional fetch options
-     * @returns {Promise<Object>} Response data
-     * @public
-     */
-    function post(url, data = {}, options = {}) {
-        // Merge headers
-        const headers = { ...defaultHeaders, ...options.headers };
-        
-        // Make the request
-        return fetch(baseUrl + url, {
-            method: 'POST',
-            headers,
-            credentials: 'same-origin',
-            body: JSON.stringify(data),
-            ...options
-        })
-        .then(processResponse)
-        .catch(error => {
-            console.error(`POST ${url} failed:`, error);
-            throw error.isApiError ? error : createApiError(null, error.message);
-        });
-    }
-    
-    /**
-     * Make a POST request with FormData
-     * @param {string} url - API endpoint URL
-     * @param {FormData} formData - Form data
-     * @param {Object} [options={}] - Additional fetch options
-     * @returns {Promise<Object>} Response data
-     * @public
-     */
-    function postWithFormData(url, formData, options = {}) {
-        // Create headers without Content-Type (browser will set it with boundary)
-        const headers = { ...defaultHeaders };
-        delete headers['Content-Type'];
-        
-        // Add any additional headers
-        if (options.headers) {
-            Object.assign(headers, options.headers);
-        }
-        
-        // Make the request
-        return fetch(baseUrl + url, {
-            method: 'POST',
-            headers,
-            credentials: 'same-origin',
-            body: formData,
-            ...options
-        })
-        .then(processResponse)
-        .catch(error => {
-            console.error(`POST FormData ${url} failed:`, error);
-            throw error.isApiError ? error : createApiError(null, error.message);
-        });
-    }
-    
-    /**
-     * Make a POST request and get blob response (for file downloads)
-     * @param {string} url - API endpoint URL
-     * @param {Object} data - Request body data
-     * @param {Object} [options={}] - Additional fetch options
-     * @returns {Promise<Blob>} Response blob
-     * @public
-     */
-    function postForBlob(url, data = {}, options = {}) {
-        // Merge headers
-        const headers = { ...defaultHeaders, ...options.headers };
-        
-        // Make the request
-        return fetch(baseUrl + url, {
-            method: 'POST',
-            headers,
-            credentials: 'same-origin',
-            body: JSON.stringify(data),
-            ...options
-        })
-        .then(response => {
-            // Check for errors but don't process response as JSON
-            if (!response.ok) {
-                throw createApiError(response, `API Error: ${response.status} ${response.statusText}`);
+            const queryParams = new URLSearchParams();
+            for (const key in params) {
+                queryParams.append(key, params[key]);
             }
-            
-            // Return blob
-            return response.blob();
+            queryUrl += '?' + queryParams.toString();
+        }
+        
+        // Make the request
+        return fetch(BASE_URL + queryUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin' // Include cookies
         })
-        .catch(error => {
-            console.error(`POST for Blob ${url} failed:`, error);
-            throw error.isApiError ? error : createApiError(null, error.message);
-        });
+        .then(checkResponse)
+        .then(response => response.json())
+        .catch(handleError);
     }
     
     /**
-     * Make a PUT request
+     * Make a POST request to the API
      * @param {string} url - API endpoint URL
-     * @param {Object} data - Request body data
-     * @param {Object} [options={}] - Additional fetch options
-     * @returns {Promise<Object>} Response data
-     * @public
+     * @param {Object} data - Data to send in the request body
+     * @returns {Promise} Promise resolving to the API response
      */
-    function put(url, data = {}, options = {}) {
-        // Merge headers
-        const headers = { ...defaultHeaders, ...options.headers };
+    function post(url, data) {
+        // Get CSRF token
+        const csrfToken = TestGeneration.UIUtils.getCSRFToken();
         
         // Make the request
-        return fetch(baseUrl + url, {
-            method: 'PUT',
-            headers,
-            credentials: 'same-origin',
+        return fetch(BASE_URL + url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
             body: JSON.stringify(data),
-            ...options
+            credentials: 'same-origin' // Include cookies
         })
-        .then(processResponse)
-        .catch(error => {
-            console.error(`PUT ${url} failed:`, error);
-            throw error.isApiError ? error : createApiError(null, error.message);
-        });
+        .then(checkResponse)
+        .then(response => response.json())
+        .catch(handleError);
     }
     
     /**
-     * Make a DELETE request
+     * Make a POST request with form data to the API (for file uploads)
      * @param {string} url - API endpoint URL
-     * @param {Object} [options={}] - Additional fetch options
-     * @returns {Promise<Object>} Response data
-     * @public
+     * @param {FormData} formData - Form data to send in the request body
+     * @returns {Promise} Promise resolving to the API response
      */
-    function del(url, options = {}) {
-        // Merge headers
-        const headers = { ...defaultHeaders, ...options.headers };
+    function postFormData(url, formData) {
+        console.log('Posting form data to:', url);
+        
+        // Get CSRF token
+        const csrfToken = TestGeneration.UIUtils.getCSRFToken();
+        
+        // Add CSRF token to form data if not already present
+        if (csrfToken && !formData.has('csrfmiddlewaretoken')) {
+            formData.append('csrfmiddlewaretoken', csrfToken);
+        }
+        
+        // Log form data entries (for debugging)
+        console.log('Form data entries:');
+        for (const pair of formData.entries()) {
+            // Don't log file contents, just the file name
+            if (pair[1] instanceof File) {
+                console.log(pair[0] + ': File - ' + pair[1].name);
+            } else {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+        }
         
         // Make the request
-        return fetch(baseUrl + url, {
-            method: 'DELETE',
-            headers,
-            credentials: 'same-origin',
-            ...options
+        return fetch(BASE_URL + url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+                // Don't set Content-Type, let the browser set it automatically for multipart/form-data
+            },
+            body: formData,
+            credentials: 'same-origin' // Include cookies
         })
-        .then(processResponse)
-        .catch(error => {
-            console.error(`DELETE ${url} failed:`, error);
-            throw error.isApiError ? error : createApiError(null, error.message);
-        });
+        .then(checkResponse)
+        .then(response => response.json())
+        .catch(handleError);
     }
     
     /**
-     * Make a PATCH request
+     * Upload a file to the API
      * @param {string} url - API endpoint URL
-     * @param {Object} data - Request body data
-     * @param {Object} [options={}] - Additional fetch options
-     * @returns {Promise<Object>} Response data
-     * @public
+     * @param {File} file - File to upload
+     * @param {Object} additionalData - Additional data to include with the file
+     * @param {Function} progressCallback - Callback for upload progress
+     * @returns {Promise} Promise resolving to the API response
      */
-    function patch(url, data = {}, options = {}) {
-        // Merge headers
-        const headers = { ...defaultHeaders, ...options.headers };
+    function uploadFile(url, file, additionalData, progressCallback) {
+        console.log('Uploading file:', file.name, 'to:', url);
         
-        // Make the request
-        return fetch(baseUrl + url, {
-            method: 'PATCH',
-            headers,
-            credentials: 'same-origin',
-            body: JSON.stringify(data),
-            ...options
-        })
-        .then(processResponse)
-        .catch(error => {
-            console.error(`PATCH ${url} failed:`, error);
-            throw error.isApiError ? error : createApiError(null, error.message);
-        });
+        // Create form data
+        const formData = new FormData();
+        formData.append('test_case_file', file);
+        
+        // Add additional data if provided
+        if (additionalData) {
+            for (const key in additionalData) {
+                formData.append(key, additionalData[key]);
+            }
+        }
+        
+        // Get CSRF token
+        const csrfToken = TestGeneration.UIUtils.getCSRFToken();
+        
+        // Check if browser supports XMLHttpRequest with upload progress
+        if (progressCallback && XMLHttpRequest.prototype.hasOwnProperty('upload')) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                
+                // Setup progress event
+                xhr.upload.addEventListener('progress', function(event) {
+                    if (event.lengthComputable) {
+                        const percentComplete = (event.loaded / event.total) * 100;
+                        progressCallback(percentComplete);
+                    }
+                });
+                
+                // Setup complete event
+                xhr.addEventListener('load', function() {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            resolve(response);
+                        } catch (e) {
+                            reject(new Error('Invalid JSON response'));
+                        }
+                    } else {
+                        reject(new Error('Upload failed: ' + xhr.status));
+                    }
+                });
+                
+                // Setup error event
+                xhr.addEventListener('error', function() {
+                    reject(new Error('Network error during upload'));
+                });
+                
+                // Open and send the request
+                xhr.open('POST', BASE_URL + url, true);
+                xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                xhr.send(formData);
+            });
+        } else {
+            // Fall back to regular fetch if no progress callback or browser doesn't support it
+            return postFormData(url, formData);
+        }
     }
     
     /**
-     * Set base URL for API requests
-     * @param {string} url - Base URL
-     * @public
+     * Check the response status and handle errors
+     * @param {Response} response - Fetch API response
+     * @returns {Response} The same response if successful
+     * @throws {Error} If the response indicates an error
+     * @private
      */
-    function setBaseUrl(url) {
-        baseUrl = url;
+    function checkResponse(response) {
+        if (!response.ok) {
+            // Try to get error details from response
+            return response.text().then(text => {
+                let errorMessage = 'HTTP error ' + response.status;
+                try {
+                    // Try to parse as JSON
+                    const errorData = JSON.parse(text);
+                    if (errorData.message) {
+                        errorMessage = errorData.message;
+                    } else if (errorData.error) {
+                        errorMessage = errorData.error;
+                    }
+                } catch (e) {
+                    // Use text as is if not JSON
+                    if (text) {
+                        errorMessage += ': ' + text;
+                    }
+                }
+                throw new Error(errorMessage);
+            });
+        }
+        return response;
     }
     
     /**
-     * Set default headers for all requests
-     * @param {Object} headers - Headers to set
-     * @public
+     * Handle API errors
+     * @param {Error} error - The error object
+     * @throws {Error} Always rethrows the error after logging
+     * @private
      */
-    function setDefaultHeaders(headers) {
-        defaultHeaders = { ...defaultHeaders, ...headers };
+    function handleError(error) {
+        console.error('API Error:', error);
+        
+        // Show user-friendly notification
+        if (TestGeneration.UIUtils && TestGeneration.UIUtils.showNotification) {
+            TestGeneration.UIUtils.showNotification(
+                'API Error: ' + error.message,
+                'error'
+            );
+        }
+        
+        // Rethrow the error for further handling
+        throw error;
     }
-    
-    /**
-     * Check if the API service has been initialized
-     * @returns {boolean} True if initialized
-     * @public
-     */
-    function isInitialized() {
-        return initialized;
-    }
-    
-    // Initialize the service when the script loads
-    initialize();
     
     // Return public API
     return {
-        initialize: initialize,
         get: get,
         post: post,
-        postWithFormData: postWithFormData,
-        postForBlob: postForBlob,
-        put: put,
-        delete: del, // 'delete' is a reserved word, so use 'del' internally
-        patch: patch,
-        setBaseUrl: setBaseUrl,
-        setDefaultHeaders: setDefaultHeaders,
-        isInitialized: isInitialized
+        postFormData: postFormData,
+        uploadFile: uploadFile
     };
 })();
+
+// Log that this module has loaded successfully
+console.log('API Service module loaded successfully');

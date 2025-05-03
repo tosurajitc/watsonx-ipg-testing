@@ -141,25 +141,199 @@ class DocumentProcessor:
             requirements_data = {
                 "document_type": "excel",
                 "file_path": file_path,
-                "sheets": {}
+                "sheets": {},
+                "requirements": [],
+                "user_stories": [],
+                "acceptance_criteria": [],
+                "raw_text": "Excel File Content:\n\n"
             }
             
             # Process each sheet
             for sheet_name, df in excel_data.items():
                 self.logger.info(f"Processing sheet: {sheet_name}")
                 
-                # Try to identify if this is a requirements or user stories sheet
-                if self._is_requirements_sheet(df):
-                    requirements_data["sheets"][sheet_name] = self._process_requirements_sheet(df)
-                else:
-                    # Just store the dataframe as dictionary for general use
-                    requirements_data["sheets"][sheet_name] = df.to_dict(orient='records')
+                # Add sheet content to raw text
+                requirements_data["raw_text"] += f"Sheet: {sheet_name}\n"
+                requirements_data["raw_text"] += df.to_string(index=False) + "\n\n"
+                
+                # Try to identify potential requirement columns
+                potential_req_cols = []
+                for col in df.columns:
+                    col_lower = str(col).lower()
+                    if any(term in col_lower for term in ['requirement', 'description', 'req', 'text']):
+                        potential_req_cols.append(col)
+                
+                # Extract requirements if we found suitable columns
+                if potential_req_cols:
+                    req_col = potential_req_cols[0]
+                    self.logger.info(f"Found requirement column: {req_col}")
+                    
+                    # Look for an ID column
+                    id_cols = [c for c in df.columns if any(term in str(c).lower() for term in ['id', 'key', '#', 'num'])]
+                    id_col = id_cols[0] if id_cols else None
+                    
+                    # Look for a type column
+                    type_cols = [c for c in df.columns if any(term in str(c).lower() for term in ['type', 'category'])]
+                    type_col = type_cols[0] if type_cols else None
+                    
+                    # Extract requirements
+                    for idx, row in df.iterrows():
+                        if pd.notna(row[req_col]) and str(row[req_col]).strip():
+                            req_text = str(row[req_col]).strip()
+                            
+                            # Generate ID or get from ID column
+                            if id_col and pd.notna(row[id_col]):
+                                req_id = str(row[id_col])
+                            else:
+                                req_id = f"REQ-{len(requirements_data['requirements'])+1}"
+                            
+                            # Determine type if available
+                            if type_col and pd.notna(row[type_col]):
+                                req_type = str(row[type_col]).lower()
+                            else:
+                                req_type = "functional" if self._is_functional_requirement(req_text) else "non-functional"
+                            
+                            # Create requirement
+                            requirement = {
+                                "id": req_id,
+                                "text": req_text,
+                                "type": req_type
+                            }
+                            requirements_data["requirements"].append(requirement)
+                
+                # Try to identify and extract user stories
+                role_cols = [c for c in df.columns if any(term in str(c).lower() for term in ['role', 'as a', 'user', 'actor'])]
+                goal_cols = [c for c in df.columns if any(term in str(c).lower() for term in ['goal', 'want', 'needs'])]
+                benefit_cols = [c for c in df.columns if any(term in str(c).lower() for term in ['benefit', 'so that', 'value'])]
+                
+                if role_cols and goal_cols:
+                    role_col = role_cols[0]
+                    goal_col = goal_cols[0]
+                    benefit_col = benefit_cols[0] if benefit_cols else None
+                    
+                    self.logger.info(f"Found user story columns: {role_col}, {goal_col}")
+                    
+                    # Extract user stories
+                    for idx, row in df.iterrows():
+                        if pd.notna(row[role_col]) and pd.notna(row[goal_col]):
+                            role = str(row[role_col]).strip()
+                            goal = str(row[goal_col]).strip()
+                            
+                            story = {
+                                "role": role,
+                                "goal": goal,
+                                "full_text": f"As a {role}, I want {goal}"
+                            }
+                            
+                            if benefit_col and pd.notna(row[benefit_col]):
+                                benefit = str(row[benefit_col]).strip()
+                                story["benefit"] = benefit
+                                story["full_text"] += f" so that {benefit}"
+                            
+                            requirements_data["user_stories"].append(story)
+                
+                # Also look for full user stories in any column
+                for col in df.columns:
+                    for idx, value in enumerate(df[col]):
+                        if pd.notna(value) and isinstance(value, str):
+                            # Look for "As a...I want...So that" pattern
+                            match = re.search(r"as\s+a\s+(.*?)\s+i\s+want\s+(.*?)(?:\s+so\s+that\s+(.*?))?$", 
+                                            str(value).lower(), re.IGNORECASE)
+                            if match:
+                                role = match.group(1).strip()
+                                goal = match.group(2).strip()
+                                benefit = match.group(3).strip() if match.group(3) else None
+                                
+                                story = {
+                                    "role": role,
+                                    "goal": goal,
+                                    "benefit": benefit,
+                                    "full_text": str(value)
+                                }
+                                requirements_data["user_stories"].append(story)
+                
+                # Store the DataFrame as dictionary in sheets
+                requirements_data["sheets"][sheet_name] = df.to_dict(orient='records')
+            
+            # If we haven't found any requirements but we have the raw text, 
+            # try to extract requirements from the text
+            if not requirements_data["requirements"] and requirements_data["raw_text"]:
+                text_extracted = self._extract_requirements_from_text(requirements_data["raw_text"])
+                
+                if text_extracted.get("requirements"):
+                    requirements_data["requirements"].extend(text_extracted["requirements"])
+                
+                if text_extracted.get("user_stories"):
+                    requirements_data["user_stories"].extend(text_extracted["user_stories"])
+                
+                if text_extracted.get("acceptance_criteria"):
+                    requirements_data["acceptance_criteria"].extend(text_extracted["acceptance_criteria"])
+                
+            self.logger.info(
+                f"Excel processing complete. Found {len(requirements_data['requirements'])} requirements, "
+                f"{len(requirements_data['user_stories'])} user stories"
+            )
             
             return requirements_data
             
         except Exception as e:
             self.logger.error(f"Error processing Excel document: {str(e)}")
             raise
+
+
+    def _extract_user_stories_from_df(self, df):
+        """Extract user stories from a DataFrame."""
+        user_stories = []
+        
+        # Check column names to identify potential user story columns
+        columns = [col.lower() for col in df.columns]
+        
+        # Look for columns that might contain user story elements
+        role_cols = [i for i, col in enumerate(columns) if any(term in col for term in ['role', 'as a', 'user', 'actor'])]
+        goal_cols = [i for i, col in enumerate(columns) if any(term in col for term in ['goal', 'want', 'needs'])]
+        benefit_cols = [i for i, col in enumerate(columns) if any(term in col for term in ['benefit', 'so that', 'value'])]
+        
+        # If we have at least role and goal columns, we can extract user stories
+        if role_cols and goal_cols:
+            role_col = df.columns[role_cols[0]]
+            goal_col = df.columns[goal_cols[0]]
+            benefit_col = df.columns[benefit_cols[0]] if benefit_cols else None
+            
+            for _, row in df.iterrows():
+                if pd.notna(row[role_col]) and pd.notna(row[goal_col]):
+                    story = {
+                        "role": str(row[role_col]),
+                        "goal": str(row[goal_col]),
+                        "benefit": str(row[benefit_col]) if benefit_col and pd.notna(row[benefit_col]) else None,
+                        "full_text": f"As a {row[role_col]}, I want {row[goal_col]}"
+                    }
+                    if benefit_col and pd.notna(row[benefit_col]):
+                        story["full_text"] += f" so that {row[benefit_col]}"
+                    user_stories.append(story)
+        
+        # Alternative method: check for a single column that might contain full user stories
+        else:
+            for col in df.columns:
+                for value in df[col]:
+                    if pd.notna(value) and isinstance(value, str):
+                        # Look for "As a...I want...So that" pattern
+                        match = re.search(r"as\s+a\s+(.*?)\s+i\s+want\s+(.*?)(?:\s+so\s+that\s+(.*?))?$", 
+                                        value.lower(), re.IGNORECASE)
+                        if match:
+                            role = match.group(1).strip()
+                            goal = match.group(2).strip()
+                            benefit = match.group(3).strip() if match.group(3) else None
+                            
+                            story = {
+                                "role": role,
+                                "goal": goal,
+                                "benefit": benefit,
+                                "full_text": value
+                            }
+                            user_stories.append(story)
+        
+        return user_stories
+
 
     def process_pdf_document(self, file_path: str) -> Dict[str, Any]:
         """

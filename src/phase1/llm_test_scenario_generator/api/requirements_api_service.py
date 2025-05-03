@@ -58,6 +58,7 @@ async def process_manual_requirements(
         logger.error(f"Error processing manual requirements: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @router.post("/file-upload")
 async def process_requirements_file(
     file: UploadFile = File(...)
@@ -71,33 +72,51 @@ async def process_requirements_file(
     Returns:
         Dict containing processed file requirements and generated scenarios
     """
-    # Validate file size (10MB limit)
-    file_size = await file.read()
-    if len(file_size) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large. Max 10MB allowed.")
-    
     try:
-        # Temporarily save file
-        file_bytes = io.BytesIO(file_size)
+        # Read file content
+        content = await file.read()
         
-        # Process file using document processor
-        requirements = doc_processor.process_document(file_bytes)
+        # Validate file size (10MB limit)
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="File too large. Max 10MB allowed.")
         
-        # Generate scenarios from file content
-        scenarios = await scenario_generator.generate_scenarios_from_document(
-            file_bytes, 
-            num_scenarios=5
-        )
+        # Create temporary file with appropriate extension
+        import tempfile
+        import os
         
-        return {
-            "status": "success",
-            "filename": file.filename,
-            "requirements": requirements,
-            "scenarios": scenarios
-        }
+        # Get file extension
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as temp_file:
+            temp_file_path = temp_file.name
+            # Write uploaded file content to temporary file
+            temp_file.write(content)
+        
+        try:
+            # Process file using document processor
+            requirements = doc_processor.process_document(temp_file_path)
+            
+            # Generate scenarios from file
+            scenarios = await scenario_generator.generate_scenarios_from_document(
+                temp_file_path, 
+                num_scenarios=5
+            )
+            
+            return {
+                "status": "success",
+                "filename": file.filename,
+                "requirements": requirements,
+                "scenarios": scenarios
+            }
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+                
     except Exception as e:
         logger.error(f"Error processing requirements file: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.post("/jira-requirements")
 async def fetch_jira_requirements(

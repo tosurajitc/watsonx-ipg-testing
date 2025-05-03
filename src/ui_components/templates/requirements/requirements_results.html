@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'requirements/css/requirements.css' %}">
+<style>
+    .requirements-results-container {
+        padding: 20px 0;
+    }
+    
+    .results-card {
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+    
+    .section-header {
+        background-color: #f5f7fa;
+        padding: 15px 20px;
+        border-bottom: 1px solid #e3e8ef;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .section-content {
+        padding: 20px;
+    }
+    
+    .badge-source {
+        background-color: #6c757d;
+        color: white;
+        font-size: 85%;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+    
+    .badge-source.manual {
+        background-color: #28a745;
+    }
+    
+    .badge-source.file {
+        background-color: #17a2b8;
+    }
+    
+    .badge-source.jira {
+        background-color: #007bff;
+    }
+    
+    .requirement-item, .scenario-item {
+        margin-bottom: 15px;
+        padding: 15px;
+        border: 1px solid #eee;
+        border-radius: 6px;
+        background-color: #fff;
+    }
+    
+    .requirement-item h5, .scenario-item h5 {
+        margin-top: 0;
+        color: #495057;
+    }
+    
+    .metadata-list {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .metadata-list li {
+        padding: 5px 0;
+        border-bottom: 1px dashed #e3e8ef;
+    }
+    
+    .metadata-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .nav-tabs .nav-item .nav-link {
+        color: #495057;
+    }
+    
+    .nav-tabs .nav-item .nav-link.active {
+        font-weight: 500;
+        color: #212529;
+    }
+    
+    .scenario-description {
+        white-space: pre-line;
+        margin-bottom: 15px;
+    }
+    
+    .back-btn {
+        margin-bottom: 20px;
+    }
+    
+    .priority-badge {
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 85%;
+    }
+    
+    .priority-high {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .priority-medium {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .priority-low {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .related-requirements {
+        font-size: 90%;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content_title %}Requirements Processing Results{% endblock %}
+
+{% block content %}
+<div class="requirements-results-container">
+    <div class="back-btn">
+        <a href="{% url 'ui_components:requirements' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Requirements Input
+        </a>
+    </div>
+
+    <!-- Source Information -->
+    <div class="results-card">
+        <div class="section-header d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Processing Information</h3>
+            <span class="badge-source {{ source }}">{{ source|title }} Input</span>
+        </div>
+        <div class="section-content">
+            {% if source == 'manual' %}
+                <p>Requirements were processed from manually entered text.</p>
+            {% elif source == 'file' %}
+                <p>Requirements were processed from uploaded file: <strong>{{ requirements.file_path|default:"Unnamed file" }}</strong></p>
+            {% elif source == 'jira' %}
+                <p>Requirements were processed from JIRA project: <strong>{{ requirements.project_key|default:"Unknown project" }}</strong></p>
+            {% endif %}
+            
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Processing Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="metadata-list">
+                                <li><strong>Requirements Found:</strong> 
+                                    {% if requirements.requirements %}
+                                        {{ requirements.requirements|length }}
+                                    {% else %}
+                                        0
+                                    {% endif %}
+                                </li>
+                                <li><strong>User Stories Found:</strong> 
+                                    {% if requirements.user_stories %}
+                                        {{ requirements.user_stories|length }}
+                                    {% else %}
+                                        0
+                                    {% endif %}
+                                </li>
+                                <li><strong>Acceptance Criteria Found:</strong> 
+                                    {% if requirements.acceptance_criteria %}
+                                        {{ requirements.acceptance_criteria|length }}
+                                    {% else %}
+                                        0
+                                    {% endif %}
+                                </li>
+                                <li><strong>Processed On:</strong> {% now "F j, Y, g:i a" %}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Scenario Generation Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="metadata-list">
+                                <li><strong>Scenarios Generated:</strong> 
+                                    {% if scenarios.scenarios %}
+                                        {{ scenarios.scenarios|length }}
+                                    {% else %}
+                                        0
+                                    {% endif %}
+                                </li>
+                                <li><strong>Detail Level:</strong> 
+                                    {{ scenarios.metadata.detail_level|default:"Medium"|title }}
+                                </li>
+                                <li><strong>Model Used:</strong> 
+                                    {{ scenarios.metadata.model_used|default:"Not specified" }}
+                                </li>
+                                <li><strong>Generation Time:</strong> 
+                                    {% if scenarios.metadata.elapsed_time %}
+                                        {{ scenarios.metadata.elapsed_time|floatformat:2 }} seconds
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs mb-4" id="resultsTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="scenarios-tab" data-bs-toggle="tab" href="#scenarios" role="tab">
+                <i class="fas fa-tasks"></i> Generated Test Scenarios
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="requirements-tab" data-bs-toggle="tab" href="#requirements" role="tab">
+                <i class="fas fa-list-check"></i> Processed Requirements
+            </a>
+        </li>
+        {% if requirements.user_stories %}
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="user-stories-tab" data-bs-toggle="tab" href="#user-stories" role="tab">
+                <i class="fas fa-user-edit"></i> User Stories
+            </a>
+        </li>
+        {% endif %}
+        {% if requirements.raw_text %}
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="raw-text-tab" data-bs-toggle="tab" href="#raw-text" role="tab">
+                <i class="fas fa-file-alt"></i> Raw Text
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="resultsTabContent">
+        <!-- Scenarios Tab -->
+        <div class="tab-pane fade show active" id="scenarios" role="tabpanel">
+            <div class="results-card">
+                <div class="section-header">
+                    <h3 class="mb-0">Generated Test Scenarios</h3>
+                </div>
+                <div class="section-content">
+                    {% if scenarios.scenarios %}
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> 
+                                    {{ scenarios.scenarios|length }} test scenarios were generated. 
+                                    You can export these scenarios or add them to the test repository.
+                                </div>
+                                <div class="btn-group mb-3">
+                                    <button class="btn btn-primary">
+                                        <i class="fas fa-file-export"></i> Export to Excel
+                                    </button>
+                                    <button class="btn btn-success">
+                                        <i class="fas fa-plus"></i> Add to Repository
+                                    </button>
+                                    <button class="btn btn-secondary">
+                                        <i class="fas fa-exchange-alt"></i> Compare with Repository
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% for scenario in scenarios.scenarios %}
+                            <div class="scenario-item">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5>{{ scenario.title }}</h5>
+                                    <span class="priority-badge priority-{{ scenario.priority|lower }}">
+                                        {{ scenario.priority|title }}
+                                    </span>
+                                </div>
+                                <p class="text-muted mb-2">ID: {{ scenario.id }}</p>
+                                <div class="scenario-description">{{ scenario.description }}</div>
+                                
+                                {% if scenario.related_requirements %}
+                                <div class="related-requirements mb-2">
+                                    <strong>Related Requirements:</strong> {{ scenario.related_requirements }}
+                                </div>
+                                {% endif %}
+                                
+                                {% if scenario.test_type %}
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <span class="badge bg-secondary">{{ scenario.test_type|title }}</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-code"></i> Generate Test Code
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> No test scenarios were generated.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Requirements Tab -->
+        <div class="tab-pane fade" id="requirements" role="tabpanel">
+            <div class="results-card">
+                <div class="section-header">
+                    <h3 class="mb-0">Processed Requirements</h3>
+                </div>
+                <div class="section-content">
+                    {% if requirements.requirements %}
+                        {% for req in requirements.requirements %}
+                            <div class="requirement-item">
+                                <h5>{{ req.id|default:"REQ-"|add:forloop.counter|stringformat:"s" }}</h5>
+                                <p>{{ req.text }}</p>
+                                <div class="d-flex justify-content-between align-items-center mt-3">
+                                    <span class="badge {% if req.type == 'functional' %}bg-primary{% else %}bg-info{% endif %}">
+                                        {{ req.type|title }}
+                                    </span>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-tasks"></i> Generate Test Cases
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> No formal requirements were extracted.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- User Stories Tab -->
+        {% if requirements.user_stories %}
+        <div class="tab-pane fade" id="user-stories" role="tabpanel">
+            <div class="results-card">
+                <div class="section-header">
+                    <h3 class="mb-0">User Stories</h3>
+                </div>
+                <div class="section-content">
+                    {% for story in requirements.user_stories %}
+                        <div class="requirement-item">
+                            <div class="mb-3">
+                                <strong>As a:</strong> {{ story.role }}<br>
+                                <strong>I want:</strong> {{ story.goal }}<br>
+                                {% if story.benefit %}
+                                <strong>So that:</strong> {{ story.benefit }}
+                                {% endif %}
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-tasks"></i> Generate Test Cases
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Raw Text Tab -->
+        {% if requirements.raw_text %}
+        <div class="tab-pane fade" id="raw-text" role="tabpanel">
+            <div class="results-card">
+                <div class="section-header">
+                    <h3 class="mb-0">Original Text</h3>
+                </div>
+                <div class="section-content">
+                    <pre class="p-3 bg-light">{{ requirements.raw_text }}</pre>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tabs
+    var triggerTabList = [].slice.call(document.querySelectorAll('#resultsTab a'))
+    triggerTabList.forEach(function (triggerEl) {
+        var tabTrigger = new bootstrap.Tab(triggerEl)
+        triggerEl.addEventListener('click', function (event) {
+            event.preventDefault()
+            tabTrigger.show()
+        })
+    })
+    
+    // Export button functionality would go here
+    // Add to repository button functionality would go here
+    // Compare with repository button functionality would go here
+});
+</script>
+{% endblock %}

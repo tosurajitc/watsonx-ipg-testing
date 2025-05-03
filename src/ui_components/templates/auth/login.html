@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Watsonx for IPG Testing{% endblock %}
+
+{% block content_title %}Login{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'ui_components:dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Login</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow" style="margin-top: 2rem; border-radius: 8px; border: none;">
+            <div class="card-header bg-primary text-white" style="border-radius: 8px 8px 0 0; padding: 1rem;">
+                <h5 class="card-title mb-0">IBM Employee Login</h5>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                <div class="messages mb-4">
+                    {% for message in messages %}
+                    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="post" action="{% url 'ui_components:login' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="username" class="form-label">IBM Email</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            <input type="email" class="form-control" id="username" name="username" 
+                                placeholder="your.name@ibm.com" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                placeholder="Enter your password" required>
+                        </div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                        <label class="form-check-label" for="remember">Remember me</label>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i> Login
+                        </button>
+                    </div>
+                    {% if next %}
+                        <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
+                </form>
+            </div>
+            <div class="card-footer text-muted" style="background-color: #f8f9fa; border-radius: 0 0 8px 8px; padding: 1rem;">
+                <div class="text-center">
+                    <p class="mb-0">Need help? Contact <a href="mailto:support@ipg-testing.ibm.com">IT Support</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Simple inline script to replace the need for auth.js
+document.addEventListener('DOMContentLoaded', function() {
+    // Simple validation
+    const loginForm = document.querySelector('form');
+    
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(event) {
+            const emailField = document.getElementById('username');
+            
+            if (emailField && emailField.value.trim()) {
+                const email = emailField.value.trim();
+                if (!email.endsWith('@ibm.com') && !email.endsWith('@in.ibm.com')) {
+                    alert('Please enter a valid IBM email address ending with @ibm.com or @in.ibm.com');
+                    event.preventDefault();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

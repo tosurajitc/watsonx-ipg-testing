@@ -1,0 +1,454 @@
+2025-05-03 10:25:36,790 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-05-03 10:25:36,790 - scenario_debug - INFO - === TEST STARTED AT 2025-05-03T10:25:36.790331 ===
+2025-05-03 10:25:36,790 - scenario_debug - INFO - Python version: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
+2025-05-03 10:25:36,790 - scenario_debug - INFO - File path: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.docx
+2025-05-03 10:25:36,790 - scenario_debug - INFO - File exists: True
+2025-05-03 10:25:36,790 - scenario_debug - INFO - === TESTING DOCUMENT PROCESSING: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.docx ===
+2025-05-03 10:25:45,490 - scenario_debug - INFO - Creating DocumentProcessor instance
+2025-05-03 10:25:45,490 - scenario_debug - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.docx
+2025-05-03 10:25:45,490 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.docx
+2025-05-03 10:25:45,490 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing Word document
+2025-05-03 10:25:45,559 - scenario_debug - INFO - Document processed successfully
+2025-05-03 10:25:45,559 - scenario_debug - INFO - Requirements type: <class 'dict'>
+2025-05-03 10:25:45,559 - scenario_debug - INFO - Requirements serializable: True
+2025-05-03 10:25:45,559 - scenario_debug - INFO - Number of extracted requirements: 14
+2025-05-03 10:25:45,559 - scenario_debug - INFO - Number of user stories: 1
+2025-05-03 10:25:45,559 - scenario_debug - INFO - Raw text length: 1238
+2025-05-03 10:25:45,559 - scenario_debug - INFO - === TESTING SCENARIO GENERATION FROM REQUIREMENTS ===
+2025-05-03 10:25:47,261 - scenario_debug - INFO - Creating ScenarioGenerator instance
+2025-05-03 10:25:47,261 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 10:25:47,261 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 10:25:48,175 - scenario_debug - INFO - Generating scenarios from requirements
+2025-05-03 10:25:48,191 - src.phase1.llm_test_scenario_generator.scenario_generator - INFO - Generating test scenarios from requirements
+2025-05-03 10:25:48,191 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating 3 test scenarios with medium detail level
+2025-05-03 10:25:48,192 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 10:25:48,217 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 10:25:48,536 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C09E79B710>
+2025-05-03 10:25:48,536 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x000001C09E7C5C50> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 10:25:48,669 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C09DE673B0>
+2025-05-03 10:25:48,672 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 10:25:48,672 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 10:25:48,676 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 10:25:48,676 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 10:25:48,676 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 10:25:49,891 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 04:55:48 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'5265'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'7.35s'), (b'x-request-id', b'req_01jta808nge1rv4w7jkwsxnxjn'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=jQim1VMN4bTw8HsI2yB4v6k5r3_xATNf2TRBb9Wihvg-1746248148-1.0.1.1-upRXRE.IgX_FiHtgwtwqXs5LP.eh0enEYeTRAMJFiogIPIokFlV3DKEObXfEFveNB8iJSoDx2RgFSdhX6Uusf4pLewNVavg6.yMUqm0Wo98; path=/; expires=Sat, 03-May-25 05:25:48 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d2b0a9f093e1c-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 10:25:49,891 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 10:25:49,891 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 10:25:49,891 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 10:25:49,891 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 10:25:49,907 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 10:25:49,907 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.71s, input tokens: 627, output tokens: 317
+2025-05-03 10:25:49,909 - scenario_debug - INFO - Scenarios generated successfully
+2025-05-03 10:25:49,910 - scenario_debug - INFO - Scenarios type: <class 'dict'>
+2025-05-03 10:25:49,910 - scenario_debug - INFO - Scenarios serializable: True
+2025-05-03 10:25:49,910 - scenario_debug - INFO - Number of generated scenarios: 3
+2025-05-03 10:25:49,910 - scenario_debug - INFO - === TESTING LLM CONNECTION ===
+2025-05-03 10:25:49,910 - scenario_debug - INFO - Creating LLMConnector instance
+2025-05-03 10:25:49,920 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 10:25:49,922 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 10:25:50,126 - scenario_debug - INFO - Testing simple prompt
+2025-05-03 10:25:50,141 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 10:25:50,141 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 10:25:50,393 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C09E852B40>
+2025-05-03 10:25:50,409 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x000001C09E84E9D0> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 10:25:50,480 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C09D15E060>
+2025-05-03 10:25:50,481 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 10:25:50,482 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 10:25:50,483 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 10:25:50,483 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 10:25:50,483 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 10:25:51,953 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 04:55:50 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14398'), (b'x-ratelimit-remaining-tokens', b'5100'), (b'x-ratelimit-reset-requests', b'10.192s'), (b'x-ratelimit-reset-tokens', b'8.998s'), (b'x-request-id', b'req_01jta80ae2fg190ftj1b7fnef5'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=qcuH58TjYWLSFu3pF.3L63IHfRXaTSRlcdnqrLEztvA-1746248150-1.0.1.1-skL2Q3ZfCKpUFc3qIvCs61FvJYExeeP6eL4PU7GXSnFQRo5ZXfMnr5Gt81pudbwLlI_1AIxQvacj7NoMsrZWaGl.foIKj208uqf0YQY6WzA; path=/; expires=Sat, 03-May-25 05:25:50 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d2b15ec4eff9d-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 10:25:51,953 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 10:25:51,969 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 10:25:51,969 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 10:25:51,969 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 10:25:51,969 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 10:25:51,969 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.83s, input tokens: 36, output tokens: 364
+2025-05-03 10:25:51,975 - scenario_debug - INFO - LLM response received successfully
+2025-05-03 10:25:51,975 - scenario_debug - INFO - Response text preview: Here is a basic test scenario for user login functionality:
+
+**Test Scenario:** User Login Functiona...
+2025-05-03 10:25:51,976 - scenario_debug - INFO - === TEST RESULTS SUMMARY ===
+2025-05-03 10:25:51,976 - scenario_debug - INFO - Document processing: SUCCESS
+2025-05-03 10:25:51,977 - scenario_debug - INFO - Scenario generation from requirements: SUCCESS
+2025-05-03 10:25:51,977 - scenario_debug - INFO - LLM connection test: SUCCESS
+2025-05-03 10:25:51,978 - scenario_debug - INFO - === TEST ENDED AT 2025-05-03T10:25:51.978087 ===
+2025-05-03 10:58:32,023 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-05-03 10:58:32,025 - scenario_debug - INFO - === TEST STARTED AT 2025-05-03T10:58:32.025612 ===
+2025-05-03 10:58:32,025 - scenario_debug - INFO - Python version: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
+2025-05-03 10:58:32,026 - scenario_debug - INFO - File path: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 10:58:32,026 - scenario_debug - INFO - File exists: True
+2025-05-03 10:58:32,026 - scenario_debug - INFO - === TESTING DOCUMENT PROCESSING: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx ===
+2025-05-03 10:58:32,588 - scenario_debug - INFO - Creating DocumentProcessor instance
+2025-05-03 10:58:32,588 - scenario_debug - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 10:58:32,588 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 10:58:32,588 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing Excel document
+2025-05-03 10:58:32,771 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing sheet: Sheet1
+2025-05-03 10:58:32,771 - scenario_debug - INFO - Document processed successfully
+2025-05-03 10:58:32,771 - scenario_debug - INFO - Requirements type: <class 'dict'>
+2025-05-03 10:58:32,771 - scenario_debug - INFO - Requirements serializable: True
+2025-05-03 10:58:32,786 - scenario_debug - INFO - === TESTING SCENARIO GENERATION FROM REQUIREMENTS ===
+2025-05-03 10:58:32,926 - scenario_debug - INFO - Creating ScenarioGenerator instance
+2025-05-03 10:58:32,939 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 10:58:32,940 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 10:58:33,213 - scenario_debug - INFO - Generating scenarios from requirements
+2025-05-03 10:58:33,213 - src.phase1.llm_test_scenario_generator.scenario_generator - INFO - Generating test scenarios from requirements
+2025-05-03 10:58:33,213 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating 3 test scenarios with medium detail level
+2025-05-03 10:58:33,213 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 10:58:33,229 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 10:58:33,542 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001182CF58170>
+2025-05-03 10:58:33,542 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x000001184099C050> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 10:58:33,632 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001183F9B2C00>
+2025-05-03 10:58:33,633 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 10:58:33,633 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 10:58:33,633 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 10:58:33,633 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 10:58:33,633 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 10:58:34,509 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 05:28:34 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'5662'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'3.38s'), (b'x-request-id', b'req_01jta9w88fea596np8xgcrrpzy'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=NJc5t9Ymzz_nYMABbTkD7jx9JfDWeGyrpKvTO9AXA1I-1746250114-1.0.1.1-8dI6S1wH.REorRCq0Etje3RVYR.b6juWAuif_0ot1I6S8KATIIoWYiy4k1NI_tXwtpQ80QGBPDnHphXJ3WTSdFIamLxHM5PB6Gqp2K5TzPI; path=/; expires=Sat, 03-May-25 05:58:34 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d5b07ef843c2e-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 10:58:34,509 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 10:58:34,509 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 10:58:34,509 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 10:58:34,509 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 10:58:34,509 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 10:58:34,509 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.30s, input tokens: 273, output tokens: 247
+2025-05-03 10:58:34,509 - scenario_debug - INFO - Scenarios generated successfully
+2025-05-03 10:58:34,509 - scenario_debug - INFO - Scenarios type: <class 'dict'>
+2025-05-03 10:58:34,509 - scenario_debug - INFO - Scenarios serializable: True
+2025-05-03 10:58:34,509 - scenario_debug - INFO - Number of generated scenarios: 3
+2025-05-03 10:58:34,509 - scenario_debug - INFO - === TESTING LLM CONNECTION ===
+2025-05-03 10:58:34,509 - scenario_debug - INFO - Creating LLMConnector instance
+2025-05-03 10:58:34,509 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 10:58:34,525 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 10:58:34,764 - scenario_debug - INFO - Testing simple prompt
+2025-05-03 10:58:34,764 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 10:58:34,773 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 10:58:34,825 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000118409FA240>
+2025-05-03 10:58:34,825 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x00000118409ECDD0> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 10:58:34,894 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000118409FA1B0>
+2025-05-03 10:58:34,894 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 10:58:34,894 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 10:58:34,894 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 10:58:34,894 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 10:58:34,894 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 10:58:36,003 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 05:28:35 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14398'), (b'x-ratelimit-remaining-tokens', b'5490'), (b'x-ratelimit-reset-requests', b'10.742999999s'), (b'x-ratelimit-reset-tokens', b'5.098s'), (b'x-request-id', b'req_01jta9w9fvea5aq1tjx6jezvdn'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=aWU2r.mIngLklWKjuZFQunCdy_bcDgmD.zBDwZestxc-1746250115-1.0.1.1-JbF2U.5LAd2c9sHYnh8ziHWsIXo5k9S02ej0QXDDWX.lgSZ1AaiT6Kmqn_vHBF6j.0ToKoeXXZ7_n8n_8dkMc2mdzjEEdEEJrgKwmI_po3Y; path=/; expires=Sat, 03-May-25 05:58:35 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d5b0fcdc32965-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 10:58:36,019 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 10:58:36,020 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 10:58:36,021 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 10:58:36,022 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 10:58:36,023 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 10:58:36,023 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.26s, input tokens: 36, output tokens: 315
+2025-05-03 10:58:36,024 - scenario_debug - INFO - LLM response received successfully
+2025-05-03 10:58:36,024 - scenario_debug - INFO - Response text preview: Here is a basic test scenario for user login functionality:
+
+**Test Scenario:** User Login Functiona...
+2025-05-03 10:58:36,025 - scenario_debug - INFO - === TEST RESULTS SUMMARY ===
+2025-05-03 10:58:36,025 - scenario_debug - INFO - Document processing: SUCCESS
+2025-05-03 10:58:36,027 - scenario_debug - INFO - Scenario generation from requirements: SUCCESS
+2025-05-03 10:58:36,027 - scenario_debug - INFO - LLM connection test: SUCCESS
+2025-05-03 10:58:36,028 - scenario_debug - INFO - === TEST ENDED AT 2025-05-03T10:58:36.028031 ===
+2025-05-03 11:10:28,641 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-05-03 11:10:28,642 - scenario_debug - INFO - === TEST STARTED AT 2025-05-03T11:10:28.642524 ===
+2025-05-03 11:10:28,643 - scenario_debug - INFO - Python version: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
+2025-05-03 11:10:28,643 - scenario_debug - INFO - File path: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:10:28,643 - scenario_debug - INFO - File exists: True
+2025-05-03 11:10:28,643 - scenario_debug - INFO - === TESTING DOCUMENT PROCESSING: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx ===
+2025-05-03 11:10:29,207 - scenario_debug - INFO - Creating DocumentProcessor instance
+2025-05-03 11:10:29,207 - scenario_debug - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:10:29,207 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:10:29,207 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing Excel document
+2025-05-03 11:10:29,386 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing sheet: Sheet1
+2025-05-03 11:10:29,386 - scenario_debug - INFO - Document processed successfully
+2025-05-03 11:10:29,386 - scenario_debug - INFO - Requirements type: <class 'dict'>
+2025-05-03 11:10:29,386 - scenario_debug - INFO - Requirements serializable: True
+2025-05-03 11:10:29,386 - scenario_debug - INFO - Number of extracted requirements: 0
+2025-05-03 11:10:29,386 - scenario_debug - INFO - Number of user stories: 0
+2025-05-03 11:10:29,386 - scenario_debug - INFO - Raw text length: 0
+2025-05-03 11:10:29,386 - scenario_debug - INFO - === TESTING SCENARIO GENERATION FROM REQUIREMENTS ===
+2025-05-03 11:10:29,548 - scenario_debug - INFO - Creating ScenarioGenerator instance
+2025-05-03 11:10:29,555 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 11:10:29,556 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 11:10:29,857 - scenario_debug - INFO - Generating scenarios from requirements
+2025-05-03 11:10:29,857 - src.phase1.llm_test_scenario_generator.scenario_generator - INFO - Generating test scenarios from requirements
+2025-05-03 11:10:29,857 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating 3 test scenarios with medium detail level
+2025-05-03 11:10:29,857 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 11:10:29,857 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 11:10:29,959 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C85CA96330>
+2025-05-03 11:10:29,960 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x000001C85D93FED0> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 11:10:30,024 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C85D10C320>
+2025-05-03 11:10:30,025 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 11:10:30,025 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 11:10:30,026 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 11:10:30,026 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 11:10:30,027 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 11:10:31,186 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 05:40:30 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'5662'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'3.38s'), (b'x-request-id', b'req_01jtaaj3vxfwxvfa4ac82k229f'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=xdyYGdRxHrDaZwsylYhrxQ5nCiPCPJ5CdhpZdvjpJj8-1746250830-1.0.1.1-36gwwmkhfyAOc3M_5yhBNe2Llwefz.8n03X8Crl7TLce0nCYhmBmfHVDRaNTnxsqP8qrVM03PzW2nzELU1HQNUwo3efN5Z7q2RPQ7.06OyQ; path=/; expires=Sat, 03-May-25 06:10:30 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d6c8558e73b79-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 11:10:31,187 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 11:10:31,188 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 11:10:31,189 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 11:10:31,189 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 11:10:31,189 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 11:10:31,189 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.33s, input tokens: 273, output tokens: 321
+2025-05-03 11:10:31,190 - scenario_debug - INFO - Scenarios generated successfully
+2025-05-03 11:10:31,190 - scenario_debug - INFO - Scenarios type: <class 'dict'>
+2025-05-03 11:10:31,190 - scenario_debug - INFO - Scenarios serializable: True
+2025-05-03 11:10:31,190 - scenario_debug - INFO - Number of generated scenarios: 0
+2025-05-03 11:10:31,190 - scenario_debug - INFO - === TESTING LLM CONNECTION ===
+2025-05-03 11:10:31,191 - scenario_debug - INFO - Creating LLMConnector instance
+2025-05-03 11:10:31,199 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 11:10:31,200 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 11:10:31,415 - scenario_debug - INFO - Testing simple prompt
+2025-05-03 11:10:31,415 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 11:10:31,415 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 11:10:31,601 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C85D820440>
+2025-05-03 11:10:31,601 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x000001C85D9F0B50> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 11:10:31,672 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C85D9FD940>
+2025-05-03 11:10:31,672 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 11:10:31,672 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 11:10:31,672 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 11:10:31,672 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 11:10:31,672 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 11:10:32,836 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 05:40:32 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14398'), (b'x-ratelimit-remaining-tokens', b'5428'), (b'x-ratelimit-reset-requests', b'10.332999999s'), (b'x-ratelimit-reset-tokens', b'5.711999999s'), (b'x-request-id', b'req_01jtaaj5g3ev4vkgg9b62ecjck'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=5bRhCgOFgjmPt5F.VuWHyhLpYU7MK.7HBFbXT2fz6Vo-1746250832-1.0.1.1-bd1IuNARP0nLpNbB5h6XjNriWN1_amip1uZMk183TdAbAUK48P2OBW6AFcgIPZpJLEYx.O1pItHMSJ.USpDUNIVeaalfOOfhytiJtZaWC.U; path=/; expires=Sat, 03-May-25 06:10:32 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d6c8fea3d3fe6-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 11:10:32,836 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 11:10:32,836 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 11:10:32,836 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 11:10:32,836 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 11:10:32,836 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 11:10:32,836 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.42s, input tokens: 36, output tokens: 329
+2025-05-03 11:10:32,836 - scenario_debug - INFO - LLM response received successfully
+2025-05-03 11:10:32,846 - scenario_debug - INFO - Response text preview: Here is a basic test scenario for user login functionality:
+
+**Test Scenario:** User Login Functiona...
+2025-05-03 11:10:32,846 - scenario_debug - INFO - === TEST RESULTS SUMMARY ===
+2025-05-03 11:10:32,846 - scenario_debug - INFO - Document processing: SUCCESS
+2025-05-03 11:10:32,846 - scenario_debug - INFO - Scenario generation from requirements: SUCCESS
+2025-05-03 11:10:32,847 - scenario_debug - INFO - LLM connection test: SUCCESS
+2025-05-03 11:10:32,848 - scenario_debug - INFO - === TEST ENDED AT 2025-05-03T11:10:32.848511 ===
+2025-05-03 11:12:21,166 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-05-03 11:12:21,167 - scenario_debug - INFO - === TEST STARTED AT 2025-05-03T11:12:21.167010 ===
+2025-05-03 11:12:21,167 - scenario_debug - INFO - Python version: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
+2025-05-03 11:12:21,168 - scenario_debug - INFO - File path: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:12:21,168 - scenario_debug - INFO - File exists: True
+2025-05-03 11:12:21,168 - scenario_debug - INFO - === TESTING DOCUMENT PROCESSING: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx ===
+2025-05-03 11:12:21,702 - scenario_debug - INFO - Creating DocumentProcessor instance
+2025-05-03 11:12:21,702 - scenario_debug - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:12:21,702 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:12:21,702 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing Excel document
+2025-05-03 11:12:21,882 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing sheet: Sheet1
+2025-05-03 11:12:21,882 - scenario_debug - INFO - Document processed successfully
+2025-05-03 11:12:21,882 - scenario_debug - INFO - Requirements type: <class 'dict'>
+2025-05-03 11:12:21,882 - scenario_debug - INFO - Requirements serializable: True
+2025-05-03 11:12:21,882 - scenario_debug - INFO - Number of extracted requirements: 0
+2025-05-03 11:12:21,882 - scenario_debug - INFO - Number of user stories: 0
+2025-05-03 11:12:21,882 - scenario_debug - INFO - Raw text length: 0
+2025-05-03 11:12:21,882 - scenario_debug - INFO - === TESTING SCENARIO GENERATION FROM REQUIREMENTS ===
+2025-05-03 11:12:22,018 - scenario_debug - INFO - Creating ScenarioGenerator instance
+2025-05-03 11:12:22,018 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 11:12:22,018 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 11:12:22,314 - scenario_debug - INFO - Generating scenarios from requirements
+2025-05-03 11:12:22,314 - src.phase1.llm_test_scenario_generator.scenario_generator - INFO - Generating test scenarios from requirements
+2025-05-03 11:12:22,314 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating 3 test scenarios with medium detail level
+2025-05-03 11:12:22,314 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 11:12:22,330 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 11:12:22,395 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001CB79C96330>
+2025-05-03 11:12:22,395 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x000001CB7AB43ED0> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 11:12:22,455 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001CB76B618B0>
+2025-05-03 11:12:22,455 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 11:12:22,455 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 11:12:22,455 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 11:12:22,455 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 11:12:22,455 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 11:12:23,419 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 05:42:22 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'5662'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'3.38s'), (b'x-request-id', b'req_01jtaanhn2fx9app1vrmvra5qq'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=Q9tGIBSLLsqHDf3CRREbUkreHK_D_7LIuHE5dYFUhGc-1746250942-1.0.1.1-kUTI.WodYIXb6UHKCmjwkuBMko9BzdY63oYPsuSu7c7NQF_lgzArb5BZIKiR1CLooiPZfVZj2lOrNbe0138ZEp27dGnqJUhpAd2ofN2gQ.w; path=/; expires=Sat, 03-May-25 06:12:22 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d6f44197affa7-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 11:12:23,419 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 11:12:23,419 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 11:12:23,419 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 11:12:23,419 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 11:12:23,419 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 11:12:23,435 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.12s, input tokens: 273, output tokens: 258
+2025-05-03 11:12:23,436 - scenario_debug - INFO - Scenarios generated successfully
+2025-05-03 11:12:23,436 - scenario_debug - INFO - Scenarios type: <class 'dict'>
+2025-05-03 11:12:23,437 - scenario_debug - INFO - Scenarios serializable: True
+2025-05-03 11:12:23,437 - scenario_debug - INFO - Number of generated scenarios: 3
+2025-05-03 11:12:23,437 - scenario_debug - INFO - === TESTING LLM CONNECTION ===
+2025-05-03 11:12:23,438 - scenario_debug - INFO - Creating LLMConnector instance
+2025-05-03 11:12:23,447 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 11:12:23,447 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 11:12:23,666 - scenario_debug - INFO - Testing simple prompt
+2025-05-03 11:12:23,666 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 11:12:23,666 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 11:12:23,822 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001CB7ABFDBE0>
+2025-05-03 11:12:23,822 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x000001CB7ABF0CD0> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 11:12:23,890 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001CB7A54FAD0>
+2025-05-03 11:12:23,890 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 11:12:23,897 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 11:12:23,897 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 11:12:23,897 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 11:12:23,897 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 11:12:25,063 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 05:42:24 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14398'), (b'x-ratelimit-remaining-tokens', b'5494'), (b'x-ratelimit-reset-requests', b'10.562s'), (b'x-ratelimit-reset-tokens', b'5.056s'), (b'x-request-id', b'req_01jtaank1zew1vq7ne989tmar5'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=3r2k1R_XhoqHdrb3UTTYrwbpaijcLXIL5oqki0SVmeI-1746250944-1.0.1.1-zE0u4m8S6ZmjnG2wkKmvjxdLV__rigXYPtWk5dGkwKFtDjYRcRwn._qHVR6qufVJ._3vm1xBH_VcUirz5f4GvUsDCgjWpFNPGHO5t9CL8Mc; path=/; expires=Sat, 03-May-25 06:12:24 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d6f4d0b5147c3-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 11:12:25,063 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 11:12:25,063 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 11:12:25,063 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 11:12:25,063 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 11:12:25,063 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 11:12:25,063 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.40s, input tokens: 36, output tokens: 335
+2025-05-03 11:12:25,063 - scenario_debug - INFO - LLM response received successfully
+2025-05-03 11:12:25,063 - scenario_debug - INFO - Response text preview: Here is a basic test scenario for user login functionality:
+
+**Test Scenario:** User Login Functiona...
+2025-05-03 11:12:25,063 - scenario_debug - INFO - === TEST RESULTS SUMMARY ===
+2025-05-03 11:12:25,063 - scenario_debug - INFO - Document processing: SUCCESS
+2025-05-03 11:12:25,063 - scenario_debug - INFO - Scenario generation from requirements: SUCCESS
+2025-05-03 11:12:25,063 - scenario_debug - INFO - LLM connection test: SUCCESS
+2025-05-03 11:12:25,063 - scenario_debug - INFO - === TEST ENDED AT 2025-05-03T11:12:25.063825 ===
+2025-05-03 11:13:56,425 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-05-03 11:13:56,425 - scenario_debug - INFO - === TEST STARTED AT 2025-05-03T11:13:56.425572 ===
+2025-05-03 11:13:56,427 - scenario_debug - INFO - Python version: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
+2025-05-03 11:13:56,427 - scenario_debug - INFO - File path: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:13:56,428 - scenario_debug - INFO - File exists: True
+2025-05-03 11:13:56,428 - scenario_debug - INFO - === TESTING DOCUMENT PROCESSING: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx ===
+2025-05-03 11:13:57,027 - scenario_debug - INFO - Creating DocumentProcessor instance
+2025-05-03 11:13:57,027 - scenario_debug - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:13:57,027 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:13:57,027 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing Excel document
+2025-05-03 11:13:57,216 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing sheet: Sheet1
+2025-05-03 11:13:57,216 - scenario_debug - INFO - Document processed successfully
+2025-05-03 11:13:57,216 - scenario_debug - INFO - Requirements type: <class 'dict'>
+2025-05-03 11:13:57,216 - scenario_debug - INFO - Requirements serializable: True
+2025-05-03 11:13:57,216 - scenario_debug - INFO - Number of extracted requirements: 0
+2025-05-03 11:13:57,222 - scenario_debug - INFO - Number of user stories: 0
+2025-05-03 11:13:57,222 - scenario_debug - INFO - Raw text length: 0
+2025-05-03 11:13:57,222 - scenario_debug - INFO - === TESTING SCENARIO GENERATION FROM REQUIREMENTS ===
+2025-05-03 11:13:57,373 - scenario_debug - INFO - Creating ScenarioGenerator instance
+2025-05-03 11:13:57,389 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 11:13:57,389 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 11:13:57,688 - scenario_debug - INFO - Generating scenarios from requirements
+2025-05-03 11:13:57,688 - src.phase1.llm_test_scenario_generator.scenario_generator - INFO - Generating test scenarios from requirements
+2025-05-03 11:13:57,688 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating 3 test scenarios with medium detail level
+2025-05-03 11:13:57,688 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 11:13:57,688 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 11:13:57,830 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000266E4958170>
+2025-05-03 11:13:57,830 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x00000266F833FED0> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 11:13:57,908 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000266F7A41340>
+2025-05-03 11:13:57,908 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 11:13:57,908 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 11:13:57,908 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 11:13:57,908 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 11:13:57,908 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 11:13:58,747 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 05:43:58 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'5662'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'3.38s'), (b'x-request-id', b'req_01jtaarewbeww84q27a1tfh0r4'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=xI9AiDn6jqYXyeME8vpzo0aDb49aC1L2U9ksVYzrEqA-1746251038-1.0.1.1-Uz25yPv6tn.l0Vx86yav5J.rz__cMURowM14rqx3pjtm2msA2kFMpUc.u6JQVPdOxmUYqtYxrVEU7zjDdkpEc58kmvTPQZiv7siNGgfuw6M; path=/; expires=Sat, 03-May-25 06:13:58 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d71989b3548d4-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 11:13:58,747 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 11:13:58,747 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 11:13:58,747 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 11:13:58,747 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 11:13:58,747 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 11:13:58,747 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.06s, input tokens: 273, output tokens: 234
+2025-05-03 11:13:58,761 - scenario_debug - INFO - Scenarios generated successfully
+2025-05-03 11:13:58,761 - scenario_debug - INFO - Scenarios type: <class 'dict'>
+2025-05-03 11:13:58,761 - scenario_debug - INFO - Scenarios serializable: True
+2025-05-03 11:13:58,761 - scenario_debug - INFO - Number of generated scenarios: 0
+2025-05-03 11:13:58,761 - scenario_debug - INFO - === TESTING LLM CONNECTION ===
+2025-05-03 11:13:58,761 - scenario_debug - INFO - Creating LLMConnector instance
+2025-05-03 11:13:58,763 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 11:13:58,763 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 11:13:58,977 - scenario_debug - INFO - Testing simple prompt
+2025-05-03 11:13:58,977 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 11:13:58,977 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 11:13:59,162 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000266F83F9E50>
+2025-05-03 11:13:59,162 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x00000266F83F0B50> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 11:13:59,453 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000266F83F9DC0>
+2025-05-03 11:13:59,454 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 11:13:59,454 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 11:13:59,455 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 11:13:59,455 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 11:13:59,455 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 11:14:00,506 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 05:44:00 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14398'), (b'x-ratelimit-remaining-tokens', b'5533'), (b'x-ratelimit-reset-requests', b'10.475999999s'), (b'x-ratelimit-reset-tokens', b'4.661999999s'), (b'x-request-id', b'req_01jtaargc0eww8r676bx2fdv2p'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=PD5RsWvxaDdzpuv9ICHREq.EKJDsP4w4rwRox0HOIWQ-1746251040-1.0.1.1-QXS2CxpKWuBkf_NJ3csx3_GOpricVjMlq5HqlXzpHXoBZN5q79tr0pHt5uTmMWDtIAoZmXIX0gkSV_kwcd6D_xD_cebeFAGJIfhUCBim46g; path=/; expires=Sat, 03-May-25 06:14:00 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d71a24af13e39-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 11:14:00,506 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 11:14:00,506 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 11:14:00,521 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 11:14:00,521 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 11:14:00,521 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 11:14:00,521 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.54s, input tokens: 36, output tokens: 327
+2025-05-03 11:14:00,521 - scenario_debug - INFO - LLM response received successfully
+2025-05-03 11:14:00,521 - scenario_debug - INFO - Response text preview: Here is a basic test scenario for user login functionality:
+
+**Test Scenario:** User Login Functiona...
+2025-05-03 11:14:00,521 - scenario_debug - INFO - === TEST RESULTS SUMMARY ===
+2025-05-03 11:14:00,521 - scenario_debug - INFO - Document processing: SUCCESS
+2025-05-03 11:14:00,521 - scenario_debug - INFO - Scenario generation from requirements: SUCCESS
+2025-05-03 11:14:00,521 - scenario_debug - INFO - LLM connection test: SUCCESS
+2025-05-03 11:14:00,521 - scenario_debug - INFO - === TEST ENDED AT 2025-05-03T11:14:00.521374 ===
+2025-05-03 11:20:10,570 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-05-03 11:20:10,570 - scenario_debug - INFO - === TEST STARTED AT 2025-05-03T11:20:10.570352 ===
+2025-05-03 11:20:10,570 - scenario_debug - INFO - Python version: 3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]
+2025-05-03 11:20:10,586 - scenario_debug - INFO - File path: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:20:10,586 - scenario_debug - INFO - File exists: True
+2025-05-03 11:20:10,587 - scenario_debug - INFO - === TESTING DOCUMENT PROCESSING: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx ===
+2025-05-03 11:20:17,541 - scenario_debug - INFO - Creating DocumentProcessor instance
+2025-05-03 11:20:17,541 - scenario_debug - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:20:17,541 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing document: C:\@Official\Automation\2025 Planning\Agentic AI Handson\IPG Testting\User Story.xlsx
+2025-05-03 11:20:17,541 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing Excel document
+2025-05-03 11:20:19,173 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Processing sheet: Sheet1
+2025-05-03 11:20:19,189 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Found user story columns: As a mobile banking user, I want to be able to set up recurring payments to my utility providers so that I can automate my monthly bill payments., As a mobile banking user, I want to be able to set up recurring payments to my utility providers so that I can automate my monthly bill payments.
+2025-05-03 11:20:19,195 - src.phase1.llm_test_scenario_generator.document_processor - INFO - Excel processing complete. Found 0 requirements, 17 user stories
+2025-05-03 11:20:19,195 - scenario_debug - INFO - Document processed successfully
+2025-05-03 11:20:19,195 - scenario_debug - INFO - Requirements type: <class 'dict'>
+2025-05-03 11:20:19,195 - scenario_debug - INFO - Requirements serializable: True
+2025-05-03 11:20:19,206 - scenario_debug - INFO - Number of extracted requirements: 0
+2025-05-03 11:20:19,206 - scenario_debug - INFO - Number of user stories: 17
+2025-05-03 11:20:19,206 - scenario_debug - INFO - Raw text length: 2810
+2025-05-03 11:20:19,206 - scenario_debug - INFO - === TESTING SCENARIO GENERATION FROM REQUIREMENTS ===
+2025-05-03 11:20:20,529 - scenario_debug - INFO - Creating ScenarioGenerator instance
+2025-05-03 11:20:20,552 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 11:20:20,552 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 11:20:21,420 - scenario_debug - INFO - Generating scenarios from requirements
+2025-05-03 11:20:21,420 - src.phase1.llm_test_scenario_generator.scenario_generator - INFO - Generating test scenarios from requirements
+2025-05-03 11:20:21,420 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating 3 test scenarios with medium detail level
+2025-05-03 11:20:21,420 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 11:20:21,450 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 11:20:21,753 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000021C02BDAC30>
+2025-05-03 11:20:21,753 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x0000021C02E7D9D0> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 11:20:21,830 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000021C01FC66C0>
+2025-05-03 11:20:21,830 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 11:20:21,830 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 11:20:21,830 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 11:20:21,830 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 11:20:21,830 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 11:20:22,965 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 05:50:22 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14399'), (b'x-ratelimit-remaining-tokens', b'4036'), (b'x-ratelimit-reset-requests', b'6s'), (b'x-ratelimit-reset-tokens', b'19.64s'), (b'x-request-id', b'req_01jtab45scfz1bt5my3vx9rzpy'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=AdfFAmW1FMuShGIEL073cBR.xJRYIcYMWbhH3hjWDuM-1746251422-1.0.1.1-EOohwgQVZIDsTNjDCR55D6knkuo2fhQ2uZAAiTjh.kI29WTo3XmTHof2J9K1a5BSZSJgRZVhq9XIkk1M64HaKqCibYUbx2MzLeJFLrkGzLw; path=/; expires=Sat, 03-May-25 06:20:22 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d7af81ab74061-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 11:20:22,965 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 11:20:22,965 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 11:20:22,965 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 11:20:22,965 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 11:20:22,965 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 11:20:22,965 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.54s, input tokens: 1485, output tokens: 300
+2025-05-03 11:20:22,965 - scenario_debug - INFO - Scenarios generated successfully
+2025-05-03 11:20:22,965 - scenario_debug - INFO - Scenarios type: <class 'dict'>
+2025-05-03 11:20:22,965 - scenario_debug - INFO - Scenarios serializable: True
+2025-05-03 11:20:22,965 - scenario_debug - INFO - Number of generated scenarios: 3
+2025-05-03 11:20:22,965 - scenario_debug - INFO - === TESTING LLM CONNECTION ===
+2025-05-03 11:20:22,965 - scenario_debug - INFO - Creating LLMConnector instance
+2025-05-03 11:20:22,986 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Using LLM service: groq
+2025-05-03 11:20:22,986 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ configuration set up with model: llama3-70b-8192
+2025-05-03 11:20:23,259 - scenario_debug - INFO - Testing simple prompt
+2025-05-03 11:20:23,259 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - Generating completion with GROQ, model: llama3-70b-8192
+2025-05-03 11:20:23,259 - httpcore.connection - DEBUG - connect_tcp.started host='api.groq.com' port=443 local_address=None timeout=60.0 socket_options=None
+2025-05-03 11:20:23,318 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000021C02F06240>
+2025-05-03 11:20:23,318 - httpcore.connection - DEBUG - start_tls.started ssl_context=<ssl.SSLContext object at 0x0000021C02F02750> server_hostname='api.groq.com' timeout=60.0
+2025-05-03 11:20:23,385 - httpcore.connection - DEBUG - start_tls.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000021C021DB830>
+2025-05-03 11:20:23,385 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-05-03 11:20:23,385 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-05-03 11:20:23,385 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-05-03 11:20:23,385 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-05-03 11:20:23,385 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-05-03 11:20:24,604 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Sat, 03 May 2025 05:50:24 GMT'), (b'Content-Type', b'application/json'), (b'Transfer-Encoding', b'chunked'), (b'Connection', b'keep-alive'), (b'Cache-Control', b'private, max-age=0, no-store, no-cache, must-revalidate'), (b'vary', b'Origin'), (b'x-groq-region', b'gcp-asia-south1'), (b'x-ratelimit-limit-requests', b'14400'), (b'x-ratelimit-limit-tokens', b'6000'), (b'x-ratelimit-remaining-requests', b'14398'), (b'x-ratelimit-remaining-tokens', b'4229'), (b'x-ratelimit-reset-requests', b'10.430999999s'), (b'x-ratelimit-reset-tokens', b'17.706999999s'), (b'x-request-id', b'req_01jtab47adez88280wphn5m5kb'), (b'cf-cache-status', b'DYNAMIC'), (b'Set-Cookie', b'__cf_bm=MMPHHe0oE.tIFPgLBSUMsm0V.dAg9okwhTj7HloD.yc-1746251424-1.0.1.1-VohWth9Vb5jAbUKRYjS3OwNwaLCHJ6kZxGWL3OlaarrM2MuWgutrQZi3FbBTeq_d4Qj1gtgsjOreel19U1S98_wNj.rBfdG6xdHGzY13sac; path=/; expires=Sat, 03-May-25 06:20:24 GMT; domain=.groq.com; HttpOnly; Secure; SameSite=None'), (b'Server', b'cloudflare'), (b'CF-RAY', b'939d7b01ee0d4419-BOM'), (b'Content-Encoding', b'br'), (b'alt-svc', b'h3=":443"; ma=86400')])
+2025-05-03 11:20:24,604 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-05-03 11:20:24,604 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-05-03 11:20:24,604 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-05-03 11:20:24,604 - httpcore.http11 - DEBUG - response_closed.started
+2025-05-03 11:20:24,604 - httpcore.http11 - DEBUG - response_closed.complete
+2025-05-03 11:20:24,604 - src.phase1.llm_test_scenario_generator.llm_connector - INFO - GROQ completion generated in 1.34s, input tokens: 36, output tokens: 338
+2025-05-03 11:20:24,604 - scenario_debug - INFO - LLM response received successfully
+2025-05-03 11:20:24,604 - scenario_debug - INFO - Response text preview: Here is a basic test scenario for user login functionality:
+
+**Test Scenario:** User Login Functiona...
+2025-05-03 11:20:24,604 - scenario_debug - INFO - === TEST RESULTS SUMMARY ===
+2025-05-03 11:20:24,604 - scenario_debug - INFO - Document processing: SUCCESS
+2025-05-03 11:20:24,604 - scenario_debug - INFO - Scenario generation from requirements: SUCCESS
+2025-05-03 11:20:24,604 - scenario_debug - INFO - LLM connection test: SUCCESS
+2025-05-03 11:20:24,604 - scenario_debug - INFO - === TEST ENDED AT 2025-05-03T11:20:24.604085 ===

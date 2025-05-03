@@ -15,320 +15,261 @@
 {% endblock %}
 
 {% block content %}
-<div class="test-generation-container">
-  <!-- Tabs for different functionalities -->
-  <ul class="nav nav-tabs" id="testGenerationTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate" type="button" role="tab" aria-controls="generate" aria-selected="true">
-        <i class="fas fa-flask"></i> Generate Detailed Test Cases
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="refine-tab" data-bs-toggle="tab" data-bs-target="#refine" type="button" role="tab" aria-controls="refine" aria-selected="false">
-        <i class="fas fa-edit"></i> Review & Refine Test Case
-      </button>
-    </li>
-  </ul>
-  
-  <!-- Tab content -->
-  <div class="tab-content" id="testGenerationTabsContent">
-    <!-- Generate Detailed Test Cases Tab -->
-    <div class="tab-pane fade show active" id="generate" role="tabpanel" aria-labelledby="generate-tab">
-      <div class="card">
-        <div class="card-header">
-          <h4>Generate Detailed Test Cases</h4>
-          <p class="text-muted">Create comprehensive test cases from requirements or direct input.</p>
-        </div>
-        <div class="card-body">
-          <form id="generateTestCaseForm" method="post" action="">
-            {% csrf_token %}
-            
-            <!-- Input Selection -->
-            <div class="form-section">
-              <h5>Input Source</h5>
-              <div class="form-group">
-                <div class="input-source-selection">
-                  <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="inputSource" id="sourceRequirements" value="requirements" checked>
-                    <label class="form-check-label" for="sourceRequirements">From Processed Requirements</label>
-                  </div>
-                  <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="inputSource" id="sourcePrompt" value="prompt">
-                    <label class="form-check-label" for="sourcePrompt">Direct Prompt/Keywords</label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Processed Requirements Section -->
-            <div class="form-section" id="requirementsSection">
-              <div id="processedRequirementsStatus" class="alert alert-info">
-                <div class="d-flex align-items-center">
-                  <div class="me-3">
-                    <i class="fas fa-info-circle fa-lg"></i>
-                  </div>
-                  <div>
-                    <span class="status-text">Loading processed requirements...</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div id="processedRequirementsContent" class="hidden">
-                <h5>Processed Requirements</h5>
-                <div class="requirements-summary mb-3">
-                  <span id="requirementsCount" class="badge bg-primary me-2">0</span> requirements found
-                  <button type="button" id="viewRequirementsBtn" class="btn btn-sm btn-outline-primary ms-2">
-                    <i class="fas fa-eye"></i> View Details
-                  </button>
-                </div>
-                
-                <div class="form-check mb-3">
-                  <input class="form-check-input" type="checkbox" id="useAllRequirements" name="useAllRequirements" checked>
-                  <label class="form-check-label" for="useAllRequirements">
-                    Use all processed requirements
-                  </label>
-                </div>
-                
-                <div id="requirementsSelectionSection" class="hidden">
-                  <div class="form-group">
-                    <label for="requirementSelect" class="form-label">Select specific requirements</label>
-                    <select class="form-select" id="requirementSelect" name="requirementId" multiple>
-                      <!-- Will be populated dynamically via JavaScript -->
-                    </select>
-                    <div class="form-text">Select one or more requirements from which to generate test cases.</div>
-                  </div>
-                </div>
-              </div>
-              
-              <div id="noRequirementsContent" class="hidden">
-                <div class="alert alert-warning">
-                  <div class="d-flex align-items-center">
-                    <div class="me-3">
-                      <i class="fas fa-exclamation-triangle fa-lg"></i>
-                    </div>
-                    <div>
-                      <p class="mb-2"><strong>No processed requirements found.</strong></p>
-                      <p class="mb-0">Please go to the <a href="{% url 'ui_components:requirements' %}">Requirements</a> section first to process requirements, or use the "Direct Prompt/Keywords" option.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Direct Prompt Input -->
-            <div class="form-section hidden" id="promptSection">
-              <h5>Enter Prompt or Keywords</h5>
-              <div class="form-group">
-                <textarea class="form-control" id="promptInput" name="prompt" rows="4" placeholder="Example: Generate login tests for admin user with valid and invalid credentials, including edge cases"></textarea>
-                <div class="form-text">Describe the functionality you want to test as specifically as possible.</div>
-              </div>
-            </div>
-            
-            <!-- Configuration Options -->
-            <div class="form-section">
-              <h5>Configuration</h5>
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <label for="detailLevel" class="form-label">Level of Detail</label>
-                    <select class="form-select" id="detailLevel" name="detailLevel">
-                      <option value="high">High (Comprehensive steps & validations)</option>
-                      <option value="medium" selected>Medium (Standard detail)</option>
-                      <option value="low">Low (Basic steps only)</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <label for="includeEdgeCases" class="form-label">Edge Cases</label>
-                    <select class="form-select" id="includeEdgeCases" name="includeEdgeCases">
-                      <option value="include" selected>Include edge cases</option>
-                      <option value="exclude">Exclude edge cases</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Action Buttons -->
-            <div class="form-actions">
-              <button type="button" id="generateTestCaseBtn" class="btn btn-primary">
-                <i class="fas fa-cogs"></i> Generate Test Cases
-              </button>
-              <button type="button" id="cancelGenerateBtn" class="btn btn-secondary">
-                <i class="fas fa-times"></i> Cancel
-              </button>
-            </div>
-          </form>
-          
-          <!-- Progress Indicator (initially hidden) -->
-          <div id="generationProgress" class="generation-progress hidden">
-            <div class="progress">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
-            </div>
-            <p class="progress-status">Generating test cases... This may take a few moments.</p>
-          </div>
-          
-          <!-- Output Area (initially hidden) -->
-          <div id="generationOutput" class="generation-output hidden">
-            <div class="card">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Generated Test Cases</h5>
-                <div class="actions">
-                  <button type="button" id="exportExcelBtn" class="btn btn-sm btn-success">
-                    <i class="fas fa-file-excel"></i> Export to Excel
-                  </button>
-                  <button type="button" id="compareRepoBtn" class="btn btn-sm btn-info">
-                    <i class="fas fa-code-branch"></i> Compare with Repository
-                  </button>
-                </div>
-              </div>
-              <div class="card-body">
-                <div id="testCasePreview" class="test-case-preview">
-                  <!-- Test case preview will be displayed here -->
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+<div class="container-fluid px-0">
+    <!-- Tab navigation -->
+    <ul class="nav nav-tabs mb-4" id="testGenerationTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate" type="button" role="tab" aria-controls="generate" aria-selected="true">
+                <i class="fas fa-flask"></i> Generate Detailed Test Cases
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="refine-tab" data-bs-toggle="tab" data-bs-target="#refine" type="button" role="tab" aria-controls="refine" aria-selected="false">
+                <i class="fas fa-edit"></i> Review & Refine Test Case
+            </button>
+        </li>
+    </ul>
     
-    <!-- Review & Refine Test Case Tab -->
-    <div class="tab-pane fade" id="refine" role="tabpanel" aria-labelledby="refine-tab">
-      <div class="card">
-        <div class="card-header">
-          <h4>Review & Refine Test Case</h4>
-          <p class="text-muted">Analyze and enhance existing test cases with AI suggestions.</p>
-        </div>
-        <div class="card-body">
-          <form id="refineTestCaseForm" method="post" action="" enctype="multipart/form-data">
-            {% csrf_token %}
-            
-            <!-- File Upload Area -->
-            <div class="form-section">
-              <h5>Upload Test Case</h5>
-              <div class="file-upload-container">
-                <div id="refinement-drop-area" class="file-upload-area">
-                  <i class="fas fa-upload fa-2x"></i>
-                  <span class="upload-text">Drag & drop a test case file here or click to browse</span>
-                  <span class="upload-hint">Supported formats: Excel, Word</span>
-                  
-                  <input type="file" name="test_case_file" id="test_case_file" class="hidden-file-input" 
-                       accept=".doc,.docx,.xls,.xlsx" required>
-                </div>
-                
-                <div id="refinement-file-preview" class="file-preview hidden">
-                  <i class="fas fa-file"></i>
-                  <div class="file-info">
-                    <span id="refinement-file-name" class="file-name"></span>
-                    <span id="refinement-file-size" class="file-size"></span>
-                  </div>
-                  <button type="button" id="refinement-remove-file" class="remove-file-btn">
-                    <i class="fas fa-times"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Action Buttons -->
-            <div class="form-actions">
-              <button type="button" id="analyzeTestCaseBtn" class="btn btn-primary">
-                <i class="fas fa-search"></i> Analyze & Suggest Refinements
-              </button>
-              <button type="button" id="cancelRefineBtn" class="btn btn-secondary">
-                <i class="fas fa-times"></i> Cancel
-              </button>
-            </div>
-          </form>
-          
-          <!-- Progress Indicator (initially hidden) -->
-          <div id="refinementProgress" class="refinement-progress hidden">
-            <div class="progress">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
-            </div>
-            <p class="progress-status">Analyzing test case... This may take a few moments.</p>
-          </div>
-          
-          <!-- Comparison View (initially hidden) -->
-          <div id="refinementComparison" class="refinement-comparison hidden">
+    <!-- Tab content -->
+    <div class="tab-content" id="testGenerationTabsContent">
+        <!-- Generate Detailed Test Cases Tab -->
+        <div class="tab-pane fade show active" id="generate" role="tabpanel" aria-labelledby="generate-tab">
             <div class="card">
-              <div class="card-header">
-                <h5>Refinement Suggestions</h5>
-              </div>
-              <div class="card-body">
-                <div class="comparison-container">
-                  <!-- Side-by-side comparison will be displayed here -->
-                  <div class="row">
-                    <div class="col-md-6">
-                      <div class="original-test-case">
-                        <h5>Original Test Case</h5>
-                        <div id="originalTestCase" class="test-case-content">
-                          <!-- Original test case content -->
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-md-6">
-                      <div class="refined-test-case">
-                        <h5>Suggested Refinements</h5>
-                        <div id="refinedTestCase" class="test-case-content">
-                          <!-- Refined test case content -->
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <!-- AI Suggestions Box -->
-                  <div class="ai-suggestions">
-                    <h5>AI Analysis & Recommendations</h5>
-                    <div id="aiSuggestions" class="ai-suggestions-content">
-                      <!-- AI suggestions will be displayed here -->
-                    </div>
-                  </div>
-                  
-                  <!-- Action Buttons -->
-                  <div class="refinement-actions">
-                    <button type="button" id="acceptSuggestionsBtn" class="btn btn-success">
-                      <i class="fas fa-check"></i> Accept Suggestions & Update Repository
-                    </button>
-                    <button type="button" id="notifyOwnerBtn" class="btn btn-info">
-                      <i class="fas fa-bell"></i> Notify Owner of Suggestions
-                    </button>
-                    <button type="button" id="markObsoleteBtn" class="btn btn-warning">
-                      <i class="fas fa-archive"></i> Mark as Obsolete
-                    </button>
-                    <button type="button" id="discardSuggestionsBtn" class="btn btn-secondary">
-                      <i class="fas fa-trash"></i> Discard Suggestions
-                    </button>
-                  </div>
+                <div class="card-header">
+                    <h4>Generate Detailed Test Cases</h4>
+                    <p class="text-muted">Create comprehensive test cases from requirements or direct input.</p>
                 </div>
-              </div>
+                <div class="card-body">
+                    <form id="generateTestCaseForm">
+                        {% csrf_token %}
+                        
+                        <!-- Input Source Section -->
+                        <div class="form-section mb-4">
+                            <h5>Input Source</h5>
+                            <div class="form-group mt-3">
+                                <div class="input-source-selection">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="inputSource" id="sourceRequirements" value="requirements" checked>
+                                        <label class="form-check-label" for="sourceRequirements">From Processed Requirements</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="inputSource" id="sourcePrompt" value="prompt">
+                                        <label class="form-check-label" for="sourcePrompt">Direct Prompt/Keywords</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Processed Requirements Section -->
+                        <div class="form-section mb-4" id="requirementsSection">
+                            <div id="processedRequirementsStatus" class="alert alert-info">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-info-circle fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <span class="status-text">No processed requirements found. Please go to the Requirements section first or use direct prompt.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Direct Prompt Input -->
+                        <div class="form-section mb-4" id="promptSection" style="display: none;">
+                            <h5>Enter Prompt or Keywords</h5>
+                            <div class="form-group">
+                                <textarea class="form-control" id="promptInput" name="prompt" rows="4" placeholder="Example: Generate login test cases for admin user with valid and invalid credentials"></textarea>
+                                <div class="form-text">Describe the functionality you want to test as specifically as possible.</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Configuration Options -->
+                        <div class="form-section mb-4">
+                            <h5>Configuration</h5>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="detailLevel" class="form-label">Level of Detail</label>
+                                        <select class="form-select" id="detailLevel" name="detailLevel">
+                                            <option value="high">High (Comprehensive steps & validations)</option>
+                                            <option value="medium" selected>Medium (Standard detail)</option>
+                                            <option value="low">Low (Basic steps only)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="targetFormat" class="form-label">Target Format</label>
+                                        <select class="form-select" id="targetFormat" name="targetFormat">
+                                            <option value="preview" selected>Preview First</option>
+                                            <option value="excel">Excel Document</option>
+                                            <option value="word">Word Document</option>
+                                            <option value="pdf">PDF Document</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="form-actions">
+                            <button type="button" id="generateTestCaseBtn" class="btn btn-primary">
+                                <i class="fas fa-cogs"></i> Generate Test Cases
+                            </button>
+                            <button type="button" id="cancelGenerateBtn" class="btn btn-secondary ms-2">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Progress Indicator (initially hidden) -->
+                    <div id="generationProgress" class="generation-progress mt-4 d-none">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+                        </div>
+                        <p class="progress-status text-center mt-2">Generating test cases... This may take a few moments.</p>
+                    </div>
+                    
+                    <!-- Output Area (initially hidden) -->
+                    <div id="generationOutput" class="generation-output mt-4 d-none">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Generated Test Cases</h5>
+                                <div class="actions">
+                                    <button type="button" id="exportExcelBtn" class="btn btn-sm btn-success">
+                                        <i class="fas fa-file-excel"></i> Export to Excel
+                                    </button>
+                                    <button type="button" id="compareRepoBtn" class="btn btn-sm btn-info ms-2">
+                                        <i class="fas fa-code-branch"></i> Compare with Repository
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="testCasePreview" class="test-case-preview">
+                                    <!-- Test case preview will be displayed here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Requirements Details Modal -->
-<div class="modal fade" id="requirementsModal" tabindex="-1" aria-labelledby="requirementsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="requirementsModalLabel">Processed Requirements Details</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div id="requirementsDetailsList">
-          <!-- Requirements will be displayed here -->
+        
+        <!-- Review & Refine Test Case Tab -->
+        <div class="tab-pane fade" id="refine" role="tabpanel" aria-labelledby="refine-tab">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Review & Refine Test Case</h4>
+                    <p class="text-muted">Analyze and enhance existing test cases with AI suggestions.</p>
+                </div>
+                <div class="card-body">
+                    <form id="refineTestCaseForm" method="post" action="{% url 'ui_components:test_generation_refine' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <!-- File Upload Area -->
+                        <div class="form-section mb-4">
+                            <h5>Upload Test Case</h5>
+                            <div class="file-upload-container mt-3">
+                                <div id="refinement-drop-area" class="file-upload-area">
+                                    <i class="fas fa-upload fa-2x"></i>
+                                    <span class="upload-text">Drag & drop a test case file here or click to browse</span>
+                                    <span class="upload-hint">Supported formats: Excel, Word</span>
+                                    
+                                    <input type="file" name="test_case_file" id="test_case_file" class="hidden-file-input" 
+                                         accept=".doc,.docx,.xls,.xlsx" required>
+                                </div>
+                                
+                                <div id="refinement-file-preview" class="file-preview d-none">
+                                    <i class="fas fa-file"></i>
+                                    <div class="file-info">
+                                        <span id="refinement-file-name" class="file-name"></span>
+                                        <span id="refinement-file-size" class="file-size"></span>
+                                    </div>
+                                    <button type="button" id="refinement-remove-file" class="remove-file-btn">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="form-actions">
+                            <button type="button" id="analyzeTestCaseBtn" class="btn btn-primary" disabled>
+                                <i class="fas fa-search"></i> Analyze & Suggest Refinements
+                            </button>
+                            <button type="button" id="cancelRefineBtn" class="btn btn-secondary ms-2">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Progress Indicator (initially hidden) -->
+                    <div id="refinementProgress" class="refinement-progress mt-4 d-none">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+                        </div>
+                        <p class="progress-status text-center mt-2">Analyzing test case... This may take a few moments.</p>
+                    </div>
+                    
+                    <!-- Comparison View (initially hidden) -->
+                    <div id="refinementComparison" class="refinement-comparison mt-4 d-none">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Refinement Suggestions</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="comparison-container">
+                                    <!-- Side-by-side comparison will be displayed here -->
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="original-test-case">
+                                                <h5>Original Test Case</h5>
+                                                <div id="originalTestCase" class="test-case-content">
+                                                    <!-- Original test case content -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="refined-test-case">
+                                                <h5>Suggested Refinements</h5>
+                                                <div id="refinedTestCase" class="test-case-content">
+                                                    <!-- Refined test case content -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- AI Suggestions Box -->
+                                    <div class="ai-suggestions mt-4">
+                                        <h5>AI Analysis & Recommendations</h5>
+                                        <div id="aiSuggestions" class="ai-suggestions-content">
+                                            <!-- AI suggestions will be displayed here -->
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Action Buttons -->
+                                    <div class="refinement-actions mt-4">
+                                        <button type="button" id="acceptSuggestionsBtn" class="btn btn-success">
+                                            <i class="fas fa-check"></i> Accept Suggestions & Update Repository
+                                        </button>
+                                        <button type="button" id="notifyOwnerBtn" class="btn btn-info ms-2">
+                                            <i class="fas fa-bell"></i> Notify Owner of Suggestions
+                                        </button>
+                                        <button type="button" id="markObsoleteBtn" class="btn btn-warning ms-2">
+                                            <i class="fas fa-archive"></i> Mark as Obsolete
+                                        </button>
+                                        <button type="button" id="discardSuggestionsBtn" class="btn btn-secondary ms-2">
+                                            <i class="fas fa-trash"></i> Discard Suggestions
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
     </div>
-  </div>
 </div>
 {% endblock %}
 
@@ -336,6 +277,553 @@
 <script src="{% static 'js/test_generation/ui_utils.js' %}"></script>
 <script src="{% static 'js/test_generation/api_service.js' %}"></script>
 <script src="{% static 'js/test_generation/generate_test_cases.js' %}"></script>
-<script src="{% static 'js/test_generation/refine_test_cases.js' %}"></script>
 <script src="{% static 'js/test_generation/test_generation_main.js' %}"></script>
+
+<!-- File Upload Script for Review & Refine Tab -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('File upload script loaded');
+    
+    // Get elements
+    const dropArea = document.getElementById('refinement-drop-area');
+    const fileInput = document.getElementById('test_case_file');
+    const filePreview = document.getElementById('refinement-file-preview');
+    const fileName = document.getElementById('refinement-file-name');
+    const fileSize = document.getElementById('refinement-file-size');
+    const removeFileBtn = document.getElementById('refinement-remove-file');
+    const analyzeBtn = document.getElementById('analyzeTestCaseBtn');
+    
+    console.log('File upload elements:', {
+        dropArea: !!dropArea,
+        fileInput: !!fileInput,
+        filePreview: !!filePreview,
+        fileName: !!fileName,
+        fileSize: !!fileSize,
+        removeFileBtn: !!removeFileBtn,
+        analyzeBtn: !!analyzeBtn
+    });
+    
+    // Check if required elements exist
+    if (!dropArea || !fileInput) {
+        console.error('Required file upload elements not found');
+        return;
+    }
+    
+    // File Input Change Event
+    fileInput.addEventListener('change', function() {
+        console.log('File input changed');
+        if (this.files && this.files.length > 0) {
+            const file = this.files[0];
+            console.log('File selected:', file.name);
+            updateFilePreview(file);
+        }
+    });
+    
+    // Click to browse
+    dropArea.addEventListener('click', function() {
+        console.log('Drop area clicked');
+        fileInput.click();
+    });
+    
+    // Prevent default behaviors for drag events
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+    
+    // Highlight drop area when file is dragged over
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, function() {
+            console.log('File dragged over drop area');
+            this.classList.add('dragover');
+        });
+    });
+    
+    // Remove highlight when file leaves drop area
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, function() {
+            console.log('File left drop area');
+            this.classList.remove('dragover');
+        });
+    });
+    
+    // Handle file drop
+    dropArea.addEventListener('drop', function(e) {
+        console.log('File dropped');
+        if (e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            console.log('File dropped:', file.name);
+            
+            if (isValidFileType(file)) {
+                // Set the file to the file input
+                fileInput.files = e.dataTransfer.files;
+                updateFilePreview(file);
+            } else {
+                alert('Invalid file type. Please upload an Excel or Word file.');
+            }
+        }
+    });
+    
+    // Handle file removal
+    if (removeFileBtn) {
+        removeFileBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Remove file button clicked');
+            removeFile();
+        });
+    }
+    
+    // Analyze button click handler
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', function() {
+            console.log('Analyze button clicked');
+            
+            // Show progress indicator
+            const progress = document.getElementById('refinementProgress');
+            if (progress) {
+                progress.classList.remove('d-none');
+            }
+            
+            // Disable button during processing
+            this.disabled = true;
+            
+            // Simulate processing (in real implementation, this would call the API)
+            setTimeout(function() {
+                // Hide progress indicator
+                if (progress) {
+                    progress.classList.add('d-none');
+                }
+                
+                // Show comparison view
+                const comparison = document.getElementById('refinementComparison');
+                if (comparison) {
+                    comparison.classList.remove('d-none');
+                }
+                
+                // Re-enable button
+                analyzeBtn.disabled = false;
+                
+                // Display example data (in real implementation, this would come from the API)
+                displayExampleResults();
+            }, 2000);
+        });
+    }
+    
+    // Function to display example results
+    function displayExampleResults() {
+        const originalTestCase = document.getElementById('originalTestCase');
+        const refinedTestCase = document.getElementById('refinedTestCase');
+        const aiSuggestions = document.getElementById('aiSuggestions');
+        
+        if (originalTestCase) {
+            originalTestCase.innerHTML = `
+                <div class="test-case-info mb-3">
+                    <p><strong>ID:</strong> TC-1234</p>
+                    <p><strong>Name:</strong> Login Test Case</p>
+                </div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Step</th>
+                            <th>Description</th>
+                            <th>Expected Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Go to the login page</td>
+                            <td>Login form appears</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Enter login credentials</td>
+                            <td>User logged in</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Check dashboard</td>
+                            <td>Dashboard displays</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        if (refinedTestCase) {
+            refinedTestCase.innerHTML = `
+                <div class="test-case-info mb-3">
+                    <p><strong>ID:</strong> TC-1234</p>
+                    <p><strong>Name:</strong> Login Test Case</p>
+                </div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Step</th>
+                            <th>Description</th>
+                            <th>Expected Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td class="bg-warning">Navigate to the login page by clicking Login button</td>
+                            <td class="bg-warning">Login page is displayed with username and password fields</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td class="bg-warning">Enter valid username and password credentials</td>
+                            <td class="bg-warning">Credentials are accepted and user is logged in successfully</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td class="bg-warning">Verify dashboard elements</td>
+                            <td class="bg-warning">Dashboard displays with user information and expected widgets</td>
+                        </tr>
+                        <tr class="table-success">
+                            <td>4</td>
+                            <td>Click logout button</td>
+                            <td>User is logged out and redirected to login page</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        if (aiSuggestions) {
+            aiSuggestions.innerHTML = `
+                <div>
+                    <h6>Analysis Summary</h6>
+                    <p>Test case has a completeness score of 65%. Several improvements would enhance test coverage and clarity.</p>
+                    
+                    <h6 class="mt-3">Key Improvements</h6>
+                    <ul>
+                        <li>Added more specific details to each step for better test execution</li>
+                        <li>Enhanced expected results with clearer success criteria</li>
+                        <li>Added logout step to complete the test flow (proper teardown)</li>
+                    </ul>
+                    
+                    <h6 class="mt-3">Missing Test Variations</h6>
+                    <ul>
+                        <li>Consider adding test cases for invalid login credentials</li>
+                        <li>Consider adding test cases for password reset functionality</li>
+                    </ul>
+                </div>
+            `;
+        }
+    }
+    
+    // Update file preview
+    function updateFilePreview(file) {
+        if (!filePreview || !fileName || !fileSize) {
+            console.error('Required preview elements not found');
+            return;
+        }
+        
+        // Update file info
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        
+        // Show file preview, hide drop area
+        filePreview.classList.remove('d-none');
+        dropArea.style.display = 'none';
+        
+        // Enable analyze button
+        if (analyzeBtn) {
+            analyzeBtn.disabled = false;
+        }
+    }
+    
+    // Remove file
+    function removeFile() {
+        // Clear file input
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        // Hide preview, show drop area
+        if (filePreview) {
+            filePreview.classList.add('d-none');
+        }
+        if (dropArea) {
+            dropArea.style.display = 'flex';
+        }
+        
+        // Disable analyze button
+        if (analyzeBtn) {
+            analyzeBtn.disabled = true;
+        }
+        
+        // Hide comparison view
+        const comparison = document.getElementById('refinementComparison');
+        if (comparison && !comparison.classList.contains('d-none')) {
+            comparison.classList.add('d-none');
+        }
+    }
+    
+    // Check if file type is valid
+    function isValidFileType(file) {
+        const validTypes = [
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+        
+        const validExtensions = ['.xlsx', '.xls', '.docx', '.doc'];
+        
+        // Check by MIME type
+        if (validTypes.includes(file.type)) {
+            return true;
+        }
+        
+        // Check by file extension as fallback
+        const fileName = file.name || '';
+        const fileExt = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+        
+        return validExtensions.includes(fileExt);
+    }
+    
+    // Format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Set up action buttons
+    const cancelBtn = document.getElementById('cancelRefineBtn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+            removeFile();
+        });
+    }
+    
+    const acceptBtn = document.getElementById('acceptSuggestionsBtn');
+    if (acceptBtn) {
+        acceptBtn.addEventListener('click', function() {
+            alert('Suggestions accepted and repository updated!');
+            // In a real implementation, this would call the API
+            removeFile();
+        });
+    }
+    
+    const notifyBtn = document.getElementById('notifyOwnerBtn');
+    if (notifyBtn) {
+        notifyBtn.addEventListener('click', function() {
+            alert('Owner has been notified about the suggestions!');
+            // In a real implementation, this would call the API
+        });
+    }
+    
+    const markObsoleteBtn = document.getElementById('markObsoleteBtn');
+    if (markObsoleteBtn) {
+        markObsoleteBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to mark this test case as obsolete?')) {
+                alert('Test case marked as obsolete. Owner has been notified.');
+                // In a real implementation, this would call the API
+                removeFile();
+            }
+        });
+    }
+    
+    const discardBtn = document.getElementById('discardSuggestionsBtn');
+    if (discardBtn) {
+        discardBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to discard these suggestions?')) {
+                removeFile();
+            }
+        });
+    }
+    
+    // Set up tab navigation to ensure file upload is visible
+    const refineTab = document.getElementById('refine-tab');
+    if (refineTab) {
+        refineTab.addEventListener('shown.bs.tab', function() {
+            console.log('Refine tab shown');
+            // Ensure dropArea is visible when tab is shown
+            if (dropArea && (!fileInput || !fileInput.files || fileInput.files.length === 0)) {
+                dropArea.style.display = 'flex';
+            }
+        });
+    }
+});
+</script>
+
+
+<!-- EMERGENCY RADIO BUTTON FIX -->
+<script type="text/javascript">
+  // This script runs immediately after the page loads
+  (function() {
+    console.log('*** EMERGENCY RADIO BUTTON FIX RUNNING ***');
+    
+    // Function to fix radio buttons
+    function fixRadioButtons() {
+      console.log('Running emergency radio button fix');
+      
+      // Get elements by ID with fallback to querySelector
+      function getElement(id) {
+        return document.getElementById(id) || document.querySelector('#' + id);
+      }
+      
+      // Get the radio buttons and content sections
+      const sourceRequirements = getElement('sourceRequirements');
+      const sourcePrompt = getElement('sourcePrompt');
+      const requirementsSection = getElement('requirementsSection');
+      const promptSection = getElement('promptSection');
+      
+      console.log('Found elements:', {
+        sourceRequirements: !!sourceRequirements,
+        sourcePrompt: !!sourcePrompt,
+        requirementsSection: !!requirementsSection,
+        promptSection: !!promptSection
+      });
+      
+      // Exit if any elements are missing
+      if (!sourceRequirements || !sourcePrompt || !requirementsSection || !promptSection) {
+        console.error('Could not find all required elements for radio button fix');
+        return;
+      }
+      
+      // Remove event listeners (might help with conflicts)
+      const clonedReqRadio = sourceRequirements.cloneNode(true);
+      const clonedPromptRadio = sourcePrompt.cloneNode(true);
+      
+      // Replace the original elements with clones to remove all listeners
+      sourceRequirements.parentNode.replaceChild(clonedReqRadio, sourceRequirements);
+      sourcePrompt.parentNode.replaceChild(clonedPromptRadio, sourcePrompt);
+      
+      // Update our references to the new elements
+      const reqRadio = clonedReqRadio;
+      const promptRadio = clonedPromptRadio;
+      
+      // Function to show requirements section
+      function showRequirementsSection() {
+        console.log('DIRECT FIX: Showing requirements section');
+        
+        // Apply multiple visibility techniques
+        requirementsSection.style.display = 'block';
+        promptSection.style.display = 'none';
+        
+        requirementsSection.classList.remove('d-none');
+        promptSection.classList.add('d-none');
+      }
+      
+      // Function to show prompt section
+      function showPromptSection() {
+        console.log('DIRECT FIX: Showing prompt section');
+        
+        // Apply multiple visibility techniques
+        requirementsSection.style.display = 'none';
+        promptSection.style.display = 'block';
+        
+        requirementsSection.classList.add('d-none');
+        promptSection.classList.remove('d-none');
+      }
+      
+      // Add click event listeners
+      reqRadio.addEventListener('click', function() {
+        console.log('Requirements radio clicked');
+        showRequirementsSection();
+      });
+      
+      promptRadio.addEventListener('click', function() {
+        console.log('Prompt radio clicked');
+        showPromptSection();
+      });
+      
+      // Also add change listeners as a backup
+      reqRadio.addEventListener('change', function() {
+        console.log('Requirements radio changed');
+        if (this.checked) {
+          showRequirementsSection();
+        }
+      });
+      
+      promptRadio.addEventListener('change', function() {
+        console.log('Prompt radio changed');
+        if (this.checked) {
+          showPromptSection();
+        }
+      });
+      
+      // Also add listeners to labels for extra reliability
+      const reqLabel = document.querySelector('label[for="sourceRequirements"]');
+      const promptLabel = document.querySelector('label[for="sourcePrompt"]');
+      
+      if (reqLabel) {
+        reqLabel.addEventListener('click', function() {
+          console.log('Requirements label clicked');
+          reqRadio.checked = true;
+          showRequirementsSection();
+        });
+      }
+      
+      if (promptLabel) {
+        promptLabel.addEventListener('click', function() {
+          console.log('Prompt label clicked');
+          promptRadio.checked = true;
+          showPromptSection();
+        });
+      }
+      
+      // Set initial state
+      console.log('Setting initial radio button state');
+      if (promptRadio.checked) {
+        showPromptSection();
+      } else {
+        showRequirementsSection();
+      }
+      
+      // Add manual toggle button for testing/emergency use
+      const form = document.querySelector('#generateTestCaseForm');
+      if (form) {
+        const toggleButton = document.createElement('button');
+        toggleButton.type = 'button';
+        toggleButton.textContent = 'Toggle Input Method';
+        toggleButton.className = 'btn btn-sm btn-warning mt-2 mb-2';
+        toggleButton.style.display = 'none';
+        toggleButton.addEventListener('click', function() {
+          console.log('Manual toggle button clicked');
+          if (promptRadio.checked) {
+            reqRadio.checked = true;
+            showRequirementsSection();
+          } else {
+            promptRadio.checked = true;
+            showPromptSection();
+          }
+        });
+        
+        // Insert after the radio buttons
+        const inputSourceDiv = document.querySelector('.input-source-selection');
+        if (inputSourceDiv) {
+          inputSourceDiv.parentNode.insertBefore(toggleButton, inputSourceDiv.nextSibling);
+        }
+      }
+    }
+    
+    // Run the fix when DOM is loaded
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fixRadioButtons);
+    } else {
+      // DOM already loaded, run immediately
+      fixRadioButtons();
+    }
+    
+    // Also run the fix after a delay to ensure all other scripts have initialized
+    setTimeout(fixRadioButtons, 500);
+    
+    // And run it one more time after all resources have loaded
+    window.addEventListener('load', fixRadioButtons);
+  })();
+</script>
+
+
 {% endblock %}

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}User Preferences - Watsonx for IPG Testing{% endblock %}
+
+{% block content_title %}User Preferences{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'ui_components:dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">User Preferences</li>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Profile & Preferences</h5>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                <div class="messages mb-4">
+                    {% for message in messages %}
+                    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="post" action="{% url 'ui_components:preferences' %}">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="text-center mb-3">
+                                <div class="user-profile-pic">
+                                    <i class="fas fa-user fa-5x"></i>
+                                </div>
+                                <h5 class="mt-3">{{ user.username }}</h5>
+                                <p class="text-muted">{{ user.email }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-3">Personal Information</h5>
+                            
+                            <div class="mb-3 row">
+                                <label for="first_name" class="col-sm-3 col-form-label">First Name</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="first_name" name="first_name" 
+                                        value="{{ user.first_name }}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 row">
+                                <label for="last_name" class="col-sm-3 col-form-label">Last Name</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="last_name" name="last_name" 
+                                        value="{{ user.last_name }}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 row">
+                                <label for="email" class="col-sm-3 col-form-label">Email</label>
+                                <div class="col-sm-9">
+                                    <input type="email" class="form-control" id="email" value="{{ user.email }}" readonly>
+                                    <small class="form-text text-muted">Email cannot be changed</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h5 class="mb-3">Application Preferences</h5>
+                    
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label">Notification Settings</label>
+                        <div class="col-sm-9">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="email_notifications" name="email_notifications" checked>
+                                <label class="form-check-label" for="email_notifications">Email Notifications</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="test_execution_alerts" name="test_execution_alerts" checked>
+                                <label class="form-check-label" for="test_execution_alerts">Test Execution Alerts</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="test_generation_alerts" name="test_generation_alerts" checked>
+                                <label class="form-check-label" for="test_generation_alerts">Test Generation Alerts</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="defect_alerts" name="defect_alerts" checked>
+                                <label class="form-check-label" for="defect_alerts">Defect Alerts</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 row">
+                        <label for="theme" class="col-sm-3 col-form-label">UI Theme</label>
+                        <div class="col-sm-9">
+                            <select class="form-select" id="theme" name="theme">
+                                <option value="light" selected>Light Mode</option>
+                                <option value="dark">Dark Mode</option>
+                                <option value="system">System Default</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <button type="button" class="btn btn-secondary me-md-2">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/auth.js' %}"></script>
+{% endblock %}

@@ -40,7 +40,7 @@
             <!-- JIRA Connection Tab -->
             <div id="jira-tab" class="tab-content {% if active_tab != 'jira' %}d-none{% endif %}">
                 <h3 class="mb-4">Connect to JIRA</h3>
-                <form method="post" action="{% url 'llm_test_scenario_generator:jira_requirements' %}" class="jira-form">
+                <form method="post" action="{% url 'ui_components:jira_requirements' %}" class="jira-form">
                     {% csrf_token %}
                     
                     <div class="form-section">
@@ -106,11 +106,11 @@
             <!-- File Upload Tab -->
             <div id="file-tab" class="tab-content {% if active_tab != 'file' %}d-none{% endif %}">
                 <h3 class="mb-4">Upload Requirements Document</h3>
-                <form method="post" action="{% url 'llm_test_scenario_generator:file_upload' %}" 
+                <form method="post" action="{% url 'ui_components:file_upload' %}" 
                       enctype="multipart/form-data" class="file-upload-form">
                     {% csrf_token %}
                     
-                    <div class="file-upload-container">
+                    <div id="drop-area" class="file-upload-container">
                         <i class="fas fa-cloud-upload-alt upload-large-icon"></i>
                         <span class="upload-text">Drag & drop a file here or click to browse</span>
                         <span class="upload-hint">Supported formats: Word, Excel, PDF, Text</span>
@@ -118,6 +118,19 @@
                         <input type="file" name="requirement_file" id="id_requirement_file" 
                                class="d-none" 
                                accept=".doc,.docx,.xls,.xlsx,.pdf,.txt" required>
+                    </div>
+
+                    <div id="file-preview" class="d-none">
+                        <div class="file-preview-content">
+                            <i class="fas fa-file-alt file-icon"></i>
+                            <div class="file-details">
+                                <span id="file-name">filename.docx</span>
+                                <span id="file-size">2.3 MB</span>
+                            </div>
+                            <button id="remove-file" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-times"></i> Remove
+                            </button>
+                        </div>
                     </div>
 
                     <div class="form-actions">
@@ -132,7 +145,7 @@
             <!-- Manual Input Tab -->
             <div id="manual-tab" class="tab-content {% if active_tab != 'manual' %}d-none{% endif %}">
                 <h3 class="mb-4">Enter Requirements Manually</h3>
-                <form method="post" action="{% url 'llm_test_scenario_generator:manual_input' %}" 
+                <form method="post" action="{% url 'ui_components:manual_input' %}" 
                       class="manual-input-form">
                     {% csrf_token %}
                     
@@ -177,6 +190,92 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById(targetTab).classList.remove('d-none');
         });
     });
+
+    // File upload handling
+    const dropArea = document.getElementById('drop-area');
+    const fileInput = document.getElementById('id_requirement_file');
+    const filePreview = document.getElementById('file-preview');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
+    const removeFileBtn = document.getElementById('remove-file');
+    
+    if (dropArea && fileInput) {
+        // Click to browse
+        dropArea.addEventListener('click', function() {
+            fileInput.click();
+        });
+        
+        // Handle file selection
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                updateFilePreview(this.files[0]);
+            }
+        });
+        
+        // Handle drag and drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, function() {
+                dropArea.classList.add('drag-active');
+            });
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, function() {
+                dropArea.classList.remove('drag-active');
+            });
+        });
+        
+        dropArea.addEventListener('drop', function(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                fileInput.files = files;
+                updateFilePreview(files[0]);
+            }
+        });
+        
+        // Handle file removal
+        if (removeFileBtn) {
+            removeFileBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                fileInput.value = '';
+                dropArea.classList.remove('d-none');
+                filePreview.classList.add('d-none');
+            });
+        }
+        
+        function updateFilePreview(file) {
+            // Update file info
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            
+            // Show preview, hide drop area
+            dropArea.classList.add('d-none');
+            filePreview.classList.remove('d-none');
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) {
+                return bytes + ' bytes';
+            } else if (bytes < 1024 * 1024) {
+                return (bytes / 1024).toFixed(2) + ' KB';
+            } else {
+                return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+            }
+        }
+    }
 });
 </script>
 {% endblock %}

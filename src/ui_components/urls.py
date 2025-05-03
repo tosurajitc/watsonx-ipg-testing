@@ -16,12 +16,20 @@ urlpatterns = [
     
     # Existing routes for requirements
     path('requirements/jira/', views.jira_requirements, name='jira_requirements'),
-    path('requirements/file-upload/', views.file_upload, name='file_upload'),
     path('requirements/manual-input/', views.manual_input, name='manual_input'),
+    path('requirements/file-upload/', views.file_upload, name='file_upload'),
+    path('requirements/results/', views.requirements_results, name='requirements_results'),
+
     
     # New routes for test generation & refinement
     path('test-generation/generate/', views.test_generation_generate, name='test_generation_generate'),
     path('test-generation/refine/', views.test_generation_refine, name='test_generation_refine'),
     path('test-generation/export-excel/', views.export_test_cases_excel, name='export_test_cases_excel'),
     path('test-generation/compare-repository/', views.compare_with_repository, name='compare_with_repository'),
+
+
+    # Add these paths to the existing urlpatterns
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('preferences/', views.user_preferences, name='preferences'),
 ]

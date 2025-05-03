@@ -1,221 +1,200 @@
+# test_scenario_generator.py
 """
-Test script for the LLM Test Scenario Generator Module.
+Test module to debug scenario generation issues.
 
-This script tests the functionality of each component and their integration.
-It's designed to work with the project directory structure where:
-- Source files are in src/phase1/llm_test_scenario_generator/
-- The .env file is in the root folder
+This module adds detailed logging to help identify where 
+test scenario generation is failing.
+
+Usage:
+    python test_scenario_generator.py "C:\path\to\your\file.docx"
 """
 
 import os
 import sys
-import asyncio
 import json
-from dotenv import load_dotenv
+import asyncio
+import logging
+from datetime import datetime
 
-# Add the source directory to the Python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.abspath(os.path.join(current_dir, 'src'))
-if src_dir not in sys.path:
-    sys.path.append(src_dir)
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("scenario_debug.log")
+    ]
+)
+logger = logging.getLogger("scenario_debug")
 
-# Import local modules
-from phase1.llm_test_scenario_generator.document_processor import DocumentProcessor
-from phase1.llm_test_scenario_generator.llm_connector import LLMConnector
-from phase1.llm_test_scenario_generator.scenario_generator import ScenarioGenerator
-from phase1.llm_test_scenario_generator.scenario_validator import ScenarioValidator
+# Add necessary paths to import the required modules
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+src_dir = os.path.join(parent_dir, 'src')
+if os.path.exists(src_dir) and src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
 
-# Load environment variables from the root directory
-root_dir = os.path.abspath(os.path.join(current_dir))
-env_path = os.path.join(root_dir, '.env')
-if os.path.exists(env_path):
-    load_dotenv(env_path)
-    print(f"Loaded .env file from: {env_path}")
-else:
-    print(f"Warning: .env file not found at {env_path}")
-    load_dotenv()  # Try default locations
+def is_serializable(obj):
+    """Test if an object is JSON serializable."""
+    try:
+        json.dumps(obj)
+        return True, None
+    except (TypeError, OverflowError) as e:
+        return False, str(e)
 
-# Sample test data
-SAMPLE_REQUIREMENTS_TEXT = """
-User Story ID: IPG-157
-Title: Customer Authentication with Multi-Factor Authentication
-Priority: High
-
-As a mobile banking user
-I want to be able to authenticate using multiple factors (password and mobile OTP)
-So that my banking transactions are more secure
-
-Acceptance Criteria:
-1. Users should be able to log in with their username and password
-2. Upon successful password verification, the system should send an OTP to the registered mobile number
-3. The OTP should be 6 digits and valid for 3 minutes
-4. Users should be able to enter the OTP to complete authentication
-5. After 3 failed OTP attempts, the account should be temporarily locked for 30 minutes
-6. Users should be able to request a new OTP if the original expires
-7. System should maintain an audit log of all authentication attempts (successful and failed)
-"""
-
-# Define output directory for test results
-output_dir = os.path.join(current_dir, 'test_results')
-os.makedirs(output_dir, exist_ok=True)
-
-async def test_document_processor():
-    """Test the DocumentProcessor component."""
-    print("\n--- Testing DocumentProcessor ---")
-    processor = DocumentProcessor()
-    
-    # Test processing raw text input
-    requirements = processor.process_raw_input(SAMPLE_REQUIREMENTS_TEXT)
-    
-    print(f"Extracted {len(requirements.get('user_stories', []))} user stories")
-    if requirements.get('user_stories'):
-        print(f"First user story role: {requirements['user_stories'][0].get('role', 'N/A')}")
-    
-    print(f"Extracted {len(requirements.get('acceptance_criteria', []))} acceptance criteria")
-    if requirements.get('acceptance_criteria'):
-        print(f"First acceptance criteria: {requirements['acceptance_criteria'][0]}")
-    
-    return requirements
-
-async def test_llm_connector():
-    """Test the LLMConnector component."""
-    print("\n--- Testing LLMConnector ---")
-    connector = LLMConnector()
-    
-    # Print current configuration for debugging
-    print(f"LLM Service: {connector.llm_service}")
-    print(f"API Base: {connector.api_base}")
-    print(f"Model: {connector.model}")
+async def test_document_processing(file_path):
+    """Test document processing."""
+    logger.info(f"=== TESTING DOCUMENT PROCESSING: {file_path} ===")
     
     try:
-        # Test a simple prompt
-        prompt = "Generate a single test scenario for user authentication with OTP."
-        system_prompt = "You are a test scenario generator. Keep your response short and focused."
+        # Import the document processor
+        from src.phase1.llm_test_scenario_generator.document_processor import DocumentProcessor
         
-        print("Sending test prompt to LLM service...")
-        response = await connector.generate_completion(
-            prompt=prompt,
-            system_prompt=system_prompt,
-            max_tokens=500
-        )
+        # Process the document
+        logger.info("Creating DocumentProcessor instance")
+        doc_processor = DocumentProcessor()
         
-        print(f"LLM Response received successfully. Length: {len(response.get('text', ''))}")
-        print(f"First 150 characters: {response.get('text', '')[:150]}...")
+        logger.info(f"Processing document: {file_path}")
+        requirements = doc_processor.process_document(file_path)
         
-        await connector.close()
-        return response
+        logger.info("Document processed successfully")
+        logger.info(f"Requirements type: {type(requirements)}")
+        
+        # Check if requirements is serializable
+        is_req_serializable, error = is_serializable(requirements)
+        logger.info(f"Requirements serializable: {is_req_serializable}")
+        
+        # Log requirements content
+        if 'requirements' in requirements:
+            logger.info(f"Number of extracted requirements: {len(requirements['requirements'])}")
+        if 'user_stories' in requirements:
+            logger.info(f"Number of user stories: {len(requirements['user_stories'])}")
+        if 'raw_text' in requirements:
+            logger.info(f"Raw text length: {len(requirements['raw_text'])}")
+        
+        return requirements
     except Exception as e:
-        print(f"Error testing LLM connector: {str(e)}")
-        await connector.close()
+        logger.error(f"Error in document processing: {str(e)}", exc_info=True)
         return None
 
-async def test_scenario_generator(requirements):
-    """Test the ScenarioGenerator component."""
-    print("\n--- Testing ScenarioGenerator ---")
-    generator = ScenarioGenerator()
+async def test_scenario_generation_from_requirements(requirements):
+    """Test generating scenarios from requirements."""
+    logger.info("=== TESTING SCENARIO GENERATION FROM REQUIREMENTS ===")
     
     try:
-        # Generate scenarios from requirements
-        print("Generating test scenarios...")
-        scenarios_response = await generator.generate_scenarios_from_requirements(
+        # Import the scenario generator
+        from src.phase1.llm_test_scenario_generator.scenario_generator import ScenarioGenerator
+        
+        # Generate scenarios
+        logger.info("Creating ScenarioGenerator instance")
+        scenario_generator = ScenarioGenerator()
+        
+        logger.info("Generating scenarios from requirements")
+        scenarios = await scenario_generator.generate_scenarios_from_requirements(
             requirements,
-            num_scenarios=2,
+            num_scenarios=3,
             detail_level="medium"
         )
         
-        num_scenarios = len(scenarios_response.get("scenarios", []))
-        print(f"Generated {num_scenarios} test scenarios")
+        logger.info("Scenarios generated successfully")
+        logger.info(f"Scenarios type: {type(scenarios)}")
         
-        if num_scenarios > 0:
-            first_scenario = scenarios_response["scenarios"][0]
-            print(f"First scenario ID: {first_scenario.get('id', 'N/A')}")
-            print(f"First scenario title: {first_scenario.get('title', 'N/A')}")
+        # Check if scenarios is serializable
+        is_scen_serializable, error = is_serializable(scenarios)
+        logger.info(f"Scenarios serializable: {is_scen_serializable}")
         
-        await generator.close()
-        return scenarios_response
+        # Log scenarios content
+        if 'scenarios' in scenarios:
+            logger.info(f"Number of generated scenarios: {len(scenarios['scenarios'])}")
+        
+        return scenarios
     except Exception as e:
-        print(f"Error testing scenario generator: {str(e)}")
-        await generator.close()
+        logger.error(f"Error in scenario generation from requirements: {str(e)}", exc_info=True)
         return None
 
-async def test_scenario_validator(scenarios_response):
-    """Test the ScenarioValidator component."""
-    print("\n--- Testing ScenarioValidator ---")
-    validator = ScenarioValidator()
+async def test_llm_connection():
+    """Test LLM connection directly."""
+    logger.info("=== TESTING LLM CONNECTION ===")
     
-    if not scenarios_response or "scenarios" not in scenarios_response:
-        print("No scenarios available for validation")
+    try:
+        # Import the LLM connector
+        from src.phase1.llm_test_scenario_generator.llm_connector import LLMConnector
+        
+        # Create LLM connector
+        logger.info("Creating LLMConnector instance")
+        llm_connector = LLMConnector()
+        
+        # Test a simple prompt
+        logger.info("Testing simple prompt")
+        response = await llm_connector.generate_completion(
+            prompt="Generate a simple test scenario for user login functionality",
+            system_prompt="You are a test engineer. Generate a basic test scenario."
+        )
+        
+        logger.info("LLM response received successfully")
+        
+        # Log the response
+        if 'text' in response:
+            logger.info(f"Response text preview: {response['text'][:100]}...")
+        
+        return response
+    except Exception as e:
+        logger.error(f"Error in LLM connection test: {str(e)}", exc_info=True)
         return None
-    
-    # Validate the generated scenarios
-    print("Validating test scenarios...")
-    validation_results = validator.validate_scenarios(
-        scenarios_response["scenarios"],
-        strict_mode=False
-    )
-    
-    print(f"Validation complete. Overall valid: {validation_results['valid']}")
-    print(f"Valid scenarios: {validation_results['metrics']['valid_scenarios']}")
-    print(f"Invalid scenarios: {validation_results['metrics']['invalid_scenarios']}")
-    print(f"Overall quality score: {validation_results['metrics']['overall_quality_score']}")
-    
-    if validation_results['scenarios']:
-        first_result = validation_results['scenarios'][0]
-        print(f"First scenario validation - ID: {first_result.get('id', 'N/A')}, Valid: {first_result.get('valid', False)}")
-        if first_result.get('issues'):
-            print(f"Issues: {first_result['issues']}")
-        if first_result.get('warnings'):
-            print(f"Warnings: {first_result['warnings']}")
-    
-    return validation_results
 
-async def run_full_integration_test():
-    """Run a full integration test of all components."""
-    print("\n=== Running Full Integration Test ===")
-    print(f"Current directory: {os.getcwd()}")
-    print(f"Python path: {sys.path}")
+async def run_tests(file_path):
+    """Run all tests."""
     
-    # 1. Process requirements
-    requirements = await test_document_processor()
-    if not requirements:
-        print("Document processor test failed")
-        return
+    # Log system info
+    logger.info(f"=== TEST STARTED AT {datetime.now().isoformat()} ===")
+    logger.info(f"Python version: {sys.version}")
+    logger.info(f"File path: {file_path}")
+    logger.info(f"File exists: {os.path.exists(file_path)}")
     
-    # 2. Test LLM connector
-    llm_response = await test_llm_connector()
-    if not llm_response:
-        print("LLM connector test failed")
-        # Continue with other tests despite failure
-    
-    # 3. Generate scenarios
-    scenarios_response = await test_scenario_generator(requirements)
-    if not scenarios_response:
-        print("Scenario generator test failed")
-        return
-    
-    # 4. Validate scenarios
-    validation_results = await test_scenario_validator(scenarios_response)
-    if not validation_results:
-        print("Scenario validator test failed")
-        return
-    
-    print("\n=== Integration Test Complete ===")
-    print("All components tested successfully!")
-
-    # Save results to files for inspection
-    with open(os.path.join(output_dir, "test_requirements.json"), "w") as f:
-        json.dump(requirements, f, indent=2)
-    
-    with open(os.path.join(output_dir, "test_scenarios.json"), "w") as f:
-        json.dump(scenarios_response, f, indent=2)
-    
-    with open(os.path.join(output_dir, "test_validation.json"), "w") as f:
-        json.dump(validation_results, f, indent=2)
-    
-    print("\nTest results saved to files in:", output_dir)
-    print("- test_requirements.json")
-    print("- test_scenarios.json")
-    print("- test_validation.json")
+    try:
+        # 1. Test document processing
+        requirements = await test_document_processing(file_path)
+        if requirements is None:
+            logger.error("Document processing test failed, cannot continue")
+            return
+        
+        # 2. Test scenario generation from requirements
+        req_scenarios = await test_scenario_generation_from_requirements(requirements)
+        
+        # 3. Test LLM connection
+        llm_response = await test_llm_connection()
+        
+        # Log final results
+        logger.info("=== TEST RESULTS SUMMARY ===")
+        logger.info(f"Document processing: {'SUCCESS' if requirements else 'FAILED'}")
+        logger.info(f"Scenario generation from requirements: {'SUCCESS' if req_scenarios and 'scenarios' in req_scenarios else 'FAILED'}")
+        logger.info(f"LLM connection test: {'SUCCESS' if llm_response and 'text' in llm_response else 'FAILED'}")
+        
+        # Results summary for display
+        print("\n=== TEST RESULTS SUMMARY ===")
+        print(f"Document processing: {'SUCCESS' if requirements else 'FAILED'}")
+        print(f"  - Requirements found: {len(requirements.get('requirements', []))}")
+        print(f"  - User stories found: {len(requirements.get('user_stories', []))}")
+        print(f"  - Has raw text: {'Yes' if 'raw_text' in requirements else 'No'}")
+        print(f"Scenario generation: {'SUCCESS' if req_scenarios and 'scenarios' in req_scenarios else 'FAILED'}")
+        print(f"  - Scenarios generated: {len(req_scenarios.get('scenarios', [])) if req_scenarios else 0}")
+        print(f"LLM connection: {'SUCCESS' if llm_response and 'text' in llm_response else 'FAILED'}")
+        
+    except Exception as e:
+        logger.error(f"Error in test execution: {str(e)}", exc_info=True)
+    finally:
+        logger.info(f"=== TEST ENDED AT {datetime.now().isoformat()} ===")
 
 if __name__ == "__main__":
-    asyncio.run(run_full_integration_test())
+    # Simplified argument handling - get the file path directly
+    if len(sys.argv) < 2:
+        print("Usage: python test_scenario_generator.py <file_path>")
+        sys.exit(1)
+    
+    # Get the file path (handles paths with spaces properly)
+    file_path = sys.argv[1]
+    
+    # Run the tests
+    asyncio.run(run_tests(file_path))

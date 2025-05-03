@@ -1,0 +1,77 @@
+/* Auth CSS for Watsonx IPG Testing */
+
+/* Login card styling */
+.card {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: 0.3s;
+    border-radius: 8px;
+    border: none;
+    margin-top: 2rem;
+}
+
+.card:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.card-header {
+    border-radius: 8px 8px 0 0 !important;
+    padding: 1rem;
+}
+
+.card-footer {
+    background-color: #f8f9fa;
+    border-radius: 0 0 8px 8px !important;
+    padding: 1rem;
+}
+
+/* User profile pic styling */
+.user-profile-pic {
+    width: 120px;
+    height: 120px;
+    background-color: #f0f0f0;
+    border-radius: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    color: #6c757d;
+}
+
+/* Form styling */
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.input-group-text {
+    background-color: #e9ecef;
+    border-right: none;
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+/* Button styling */
+.btn-primary {
+    background-color: #0062cc;
+    border-color: #005cbf;
+}
+
+.btn-primary:hover {
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+
+/* Alert styling */
+.alert {
+    border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+    .user-profile-pic {
+        width: 100px;
+        height: 100px;
+    }
+}
