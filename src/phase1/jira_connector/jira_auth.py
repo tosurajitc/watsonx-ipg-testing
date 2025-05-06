@@ -9,7 +9,7 @@ from requests.auth import HTTPBasicAuth
 class JiraAuth:
     def get_jira_auth_token():
         """Authenticate using API Token and return Basic Auth object"""
-        jira_email = os.getenv("JIRA_EMAIL")
+        jira_email = os.getenv("JIRA_EMAIL") # use yourcompany.atlassian.net
         jira_api_token = os.getenv("JIRA_API_TOKEN")
         
         if not jira_email or not jira_api_token:
