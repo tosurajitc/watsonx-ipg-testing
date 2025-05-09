@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Settings - Watsonx for IPG Testing{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/settings/settings.css' %}">
+{% endblock %}
+
+{% block content_title %}Settings{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="/">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Settings</li>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <!-- Connections Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">
+                <i class="fas fa-plug me-2"></i>Connections
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="connections-form">
+                <!-- JIRA Connections -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="jira-url" class="form-label">JIRA URL</label>
+                        <input type="text" class="form-control" id="jira-url" name="jira_url" placeholder="https://your-jira-instance.atlassian.net">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="jira-api-key" class="form-label">JIRA API Token</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="jira-api-key" name="jira_api_key" placeholder="Enter JIRA API token">
+                            <button class="btn btn-outline-secondary" type="button" id="jira-show-password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="button" class="btn btn-primary" id="test-jira-connection">
+                            <i class="fas fa-network-wired me-2"></i>Test Connection
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ALM Connections -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="alm-url" class="form-label">ALM URL</label>
+                        <input type="text" class="form-control" id="alm-url" name="alm_url" placeholder="https://your-alm-instance.com">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="alm-username" class="form-label">ALM Username</label>
+                        <input type="text" class="form-control" id="alm-username" name="alm_username" placeholder="Enter ALM username">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="alm-password" class="form-label">ALM Password</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="alm-password" name="alm_password" placeholder="Enter ALM password">
+                            <button class="btn btn-outline-secondary" type="button" id="alm-show-password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SharePoint Connections -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="sharepoint-url" class="form-label">SharePoint Site URL</label>
+                        <input type="text" class="form-control" id="sharepoint-url" name="sharepoint_url" placeholder="https://your-organization.sharepoint.com">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="sharepoint-client-id" class="form-label">Client ID</label>
+                        <input type="text" class="form-control" id="sharepoint-client-id" name="sharepoint_client_id" placeholder="Enter SharePoint Client ID">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="button" class="btn btn-primary" id="test-sharepoint-connection">
+                            <i class="fas fa-network-wired me-2"></i>Test Connection
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Save Connections
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Rule Engine Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">
+                <i class="fas fa-cogs me-2"></i>Rule Engine
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Test Case Owner Assignment Rules -->
+                <div class="col-md-6">
+                    <h6>Test Case Owner Assignment</h6>
+                    <form id="test-case-owner-rules">
+                        <div class="mb-3">
+                            <label class="form-label">Rule Criteria</label>
+                            <select class="form-select" id="test-case-rule-type">
+                                <option value="module">By Application Module</option>
+                                <option value="source">By Requirement Source</option>
+                                <option value="complexity">By Test Case Complexity</option>
+                            </select>
+                        </div>
+                        <div id="test-case-rule-details">
+                            <!-- Dynamic rule details will be populated here -->
+                            <div class="rule-group mb-3">
+                                <div class="input-group">
+                                    <select class="form-select">
+                                        <option>Web Application</option>
+                                        <option>Mobile Application</option>
+                                        <option>API</option>
+                                    </select>
+                                    <select class="form-select">
+                                        <option>John Doe</option>
+                                        <option>Jane Smith</option>
+                                        <option>Alex Johnson</option>
+                                    </select>
+                                    <button class="btn btn-danger" type="button">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="add-test-case-rule">
+                                <i class="fas fa-plus me-2"></i>Add Rule
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Defect Assignment Rules -->
+                <div class="col-md-6">
+                    <h6>Defect Assignment</h6>
+                    <form id="defect-assignment-rules">
+                        <div class="mb-3">
+                            <label class="form-label">Rule Criteria</label>
+                            <select class="form-select" id="defect-rule-type">
+                                <option value="component">By Component</option>
+                                <option value="severity">By Severity</option>
+                                <option value="error-type">By Error Type</option>
+                            </select>
+                        </div>
+                        <div id="defect-rule-details">
+                            <!-- Dynamic rule details will be populated here -->
+                            <div class="rule-group mb-3">
+                                <div class="input-group">
+                                    <select class="form-select">
+                                        <option>Frontend</option>
+                                        <option>Backend</option>
+                                        <option>Database</option>
+                                    </select>
+                                    <select class="form-select">
+                                        <option>High Severity</option>
+                                        <option>Medium Severity</option>
+                                        <option>Low Severity</option>
+                                    </select>
+                                    <select class="form-select">
+                                        <option>Dev Team Lead</option>
+                                        <option>QA Manager</option>
+                                        <option>Project Manager</option>
+                                    </select>
+                                    <button class="btn btn-danger" type="button">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="add-defect-rule">
+                                <i class="fas fa-plus me-2"></i>Add Rule
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Save Rules
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">
+                <i class="fas fa-file-excel me-2"></i>Templates
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="templates-form">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="test-case-template" class="form-label">Test Case Export Template</label>
+                        <div class="input-group">
+                            <input type="file" class="form-control" id="test-case-template" name="test_case_template" accept=".xlsx,.xls">
+                            <button class="btn btn-outline-secondary" type="button" id="view-template">
+                                <i class="fas fa-eye me-2"></i>View
+                            </button>
+                        </div>
+                        <small class="form-text text-muted">Supported formats: .xlsx, .xls</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Existing Templates</label>
+                        <div class="template-list">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>Default Test Case Template</span>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Custom Test Case Template v2</span>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Save Templates
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Automation Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">
+                <i class="fas fa-robot me-2"></i>Automation Configuration
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="automation-form">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="controller-file-path" class="form-label">Controller Files Path</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="controller-file-path" name="controller_file_path" placeholder="/path/to/controller/files">
+                            <button class="btn btn-outline-secondary" type="button" id="browse-controller-path">
+                                <i class="fas fa-folder-open"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="driver-script-path" class="form-label">Driver Scripts Path</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="driver-script-path" name="driver_script_path" placeholder="/path/to/driver/scripts">
+                            <button class="btn btn-outline-secondary" type="button" id="browse-driver-path">
+                                <i class="fas fa-folder-open"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Save Automation Paths
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notifications Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">
+                <i class="fas fa-bell me-2"></i>Notification Configuration
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="notifications-form">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Event Notification Recipients</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Test Case Owner Assignment</label>
+                            <select class="form-select" multiple id="owner-assignment-recipients">
+                                <option value="john.doe@company.com">John Doe</option>
+                                <option value="jane.smith@company.com">Jane Smith</option>
+                                <option value="project.manager@company.com">Project Manager</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Test Execution Failures</label>
+                            <select class="form-select" multiple id="failure-recipients">
+                                <option value="qa.lead@company.com">QA Lead</option>
+                                <option value="dev.team@company.com">Development Team</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Execution Completion</label>
+                            <select class="form-select" multiple id="completion-recipients">
+                                <option value="test.lead@company.com">Test Lead</option>
+                                <option value="stakeholders@company.com">Stakeholders</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Save Notification Settings
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Management Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title">
+                <i class="fas fa-users me-2"></i>User Management
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Add New User</h6>
+                    <form id="add-user-form">
+                        <div class="mb-3">
+                            <label for="new-user-name" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="new-user-name" name="new_user_name" placeholder="Enter full name">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-user-email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="new-user-email" name="new_user_email" placeholder="Enter email address">
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-user-role" class="form-label">User Role</label>
+                            <select class="form-select" id="new-user-role" name="new_user_role">
+                                <option value="viewer">Viewer</option>
+                                <option value="tester">Tester</option>
+                                <option value="test-lead">Test Lead</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new-user-password" class="form-label">Temporary Password</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="new-user-password" name="new_user_password" placeholder="Generate or enter temporary password">
+                                <button class="btn btn-outline-secondary" type="button" id="generate-password">
+                                    <i class="fas fa-magic"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>Create User
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <h6>Existing Users</h6>
+                    <div class="user-list">
+                        <div class="card mb-2">
+                            <div class="card-body d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>John Doe</strong>
+                                    <p class="text-muted mb-0">john.doe@company.com</p>
+                                    <span class="badge bg-primary">Test Lead</span>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#edit-user-modal">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card mb-2">
+                            <div class="card-body d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Jane Smith</strong>
+                                    <p class="text-muted mb-0">jane.smith@company.com</p>
+                                    <span class="badge bg-success">Tester</span>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#edit-user-modal">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/settings/settings.js' %}"></script>
+{% endblock %}

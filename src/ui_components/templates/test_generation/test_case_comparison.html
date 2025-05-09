@@ -1,0 +1,58 @@
+<!-- test_case_comparison.html -->
+<div class="refinement-comparison mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h5>Refinement Suggestions</h5>
+        </div>
+        <div class="card-body">
+            <div class="comparison-container">
+                <!-- Side-by-side comparison will be displayed here -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="original-test-case">
+                            <h5>Original Test Case</h5>
+                            <div id="originalTestCase" class="test-case-content">
+                                <!-- Original test case content -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="refined-test-case">
+                            <h5>Suggested Refinements</h5>
+                            <div id="refinedTestCase" class="test-case-content">
+                                <!-- Refined test case content -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AI Suggestions Box -->
+                <div class="ai-suggestions mt-4">
+                    <h5>AI Analysis & Recommendations</h5>
+                    <div id="aiSuggestions" class="ai-suggestions-content">
+                        <!-- AI suggestions will be displayed here -->
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="refinement-actions mt-4">
+                    <button type="button" id="acceptSuggestionsBtn" class="btn btn-success">
+                        <i class="fas fa-check"></i> Accept Suggestions & Update Repository
+                    </button>
+                    <button type="button" id="downloadRefinedBtn" class="btn btn-primary ms-2">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                    <button type="button" id="notifyOwnerBtn" class="btn btn-info ms-2">
+                        <i class="fas fa-bell"></i> Notify Owner of Suggestions
+                    </button>
+                    <button type="button" id="markObsoleteBtn" class="btn btn-warning ms-2">
+                        <i class="fas fa-archive"></i> Mark as Obsolete
+                    </button>
+                    <button type="button" id="discardSuggestionsBtn" class="btn btn-secondary ms-2">
+                        <i class="fas fa-trash"></i> Discard Suggestions
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

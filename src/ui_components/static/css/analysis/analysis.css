@@ -1,0 +1,171 @@
+/* Analysis Page Styles */
+
+/* Tab Navigation Styling */
+#analysisTab .nav-link {
+    color: #495057;
+    font-weight: 500;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0;
+    border: none;
+    border-bottom: 2px solid transparent;
+}
+
+#analysisTab .nav-link.active {
+    color: #0d6efd;
+    background-color: transparent;
+    border-bottom: 2px solid #0d6efd;
+}
+
+#analysisTab .nav-link:hover:not(.active) {
+    border-bottom: 2px solid #dee2e6;
+}
+
+/* Failed Tests Table Styling */
+.failed-tests-table th, .defects-table th {
+    font-weight: 600;
+    color: #495057;
+}
+
+.test-failure:hover, .defect-row:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.failed-tests-table .analyze-btn {
+    margin-right: 0.25rem;
+}
+
+/* Analysis Panel Styling */
+.analysis-panel .card-header {
+    padding: 1rem 1.25rem;
+}
+
+.analysis-panel .card-title {
+    font-weight: 500;
+}
+
+.section-title {
+    margin-bottom: 0.75rem;
+    color: #495057;
+    font-weight: 600;
+}
+
+.analysis-section {
+    border-radius: 0.25rem;
+}
+
+.error-details, .root-cause, .remediation {
+    border-radius: 0.25rem;
+}
+
+.error-details strong, .root-cause strong, .remediation strong {
+    color: #495057;
+}
+
+.most-likely-cause, .fix-recommendation {
+    border-radius: 0.25rem;
+}
+
+.code-font {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+}
+
+/* Log Snippets */
+.log-snippets {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* Error highlighting */
+.text-danger {
+    font-weight: 500;
+}
+
+/* Status badges */
+.badge {
+    padding: 0.4em 0.6em;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Sidebar filters */
+.filter-controls .dropdown-menu {
+    min-width: 200px;
+}
+
+/* Comments styling */
+.defect-comments {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.comment {
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+/* Modal styling */
+.modal-header h5 {
+    font-weight: 500;
+}
+
+/* Screenshot modal */
+#errorScreenshot {
+    max-height: 70vh;
+}
+
+/* Defect form styling */
+#defectForm label {
+    font-weight: 500;
+    color: #495057;
+}
+
+/* Tablet and mobile adjustments */
+@media (max-width: 992px) {
+    #analysisTab .nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .analysis-panel .row > div {
+        margin-bottom: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    button.btn-sm {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+    }
+    
+    .analysis-panel .card-header {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Helpful utility classes */
+.border-hover:hover {
+    border-color: #0d6efd !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+/* Tooltip styling for additional info */
+.info-tooltip {
+    cursor: help;
+}
+
+/* Improving accessibility */
+.high-contrast-text {
+    color: #212529;
+    font-weight: 500;
+}

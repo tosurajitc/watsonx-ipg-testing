@@ -1,0 +1,161 @@
+/* Settings Page Specific Styles */
+.settings-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Card Styles */
+.settings-container .card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.settings-container .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    padding: 15px;
+}
+
+.settings-container .card-header .card-title {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+}
+
+.settings-container .card-header .card-title i {
+    margin-right: 10px;
+    color: #6c757d;
+}
+
+/* Form Styles */
+.settings-container form > .row {
+    margin-bottom: 15px;
+}
+
+.settings-container .form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Rule Engine Styles */
+#test-case-rule-details .rule-group,
+#defect-rule-details .rule-group {
+    margin-bottom: 10px;
+    position: relative;
+}
+
+#test-case-rule-details .input-group,
+#defect-rule-details .input-group {
+    margin-bottom: 10px;
+}
+
+#add-test-case-rule,
+#add-defect-rule {
+    margin-top: 10px;
+}
+
+/* Templates Section Styles */
+.template-list {
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.template-list .d-flex {
+    padding: 8px;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.template-list .d-flex:last-child {
+    border-bottom: none;
+}
+
+/* Notifications Section Styles */
+#notifications-form .form-select[multiple] {
+    height: 150px;
+}
+
+/* User Management Styles */
+.user-list .card {
+    transition: all 0.3s ease;
+}
+
+.user-list .card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+}
+
+.user-list .badge {
+    font-size: 0.75rem;
+    padding: 0.25em 0.5em;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .settings-container {
+        padding: 10px;
+    }
+
+    .settings-container .card-body {
+        padding: 15px;
+    }
+
+    .settings-container form > .row {
+        margin-bottom: 10px;
+    }
+}
+
+/* Input Group Enhancements */
+.input-group > .btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* Error and Validation Styles */
+.is-invalid {
+    border-color: #dc3545;
+}
+
+.invalid-feedback {
+    color: #dc3545;
+    display: none;
+}
+
+.form-control.is-invalid + .invalid-feedback {
+    display: block;
+}
+
+/* Connection Test Button Styles */
+#test-jira-connection,
+#test-sharepoint-connection {
+    margin-top: 32px;
+}
+
+/* Scrollbar Styling for Lists */
+.template-list,
+#notifications-form .form-select[multiple] {
+    scrollbar-width: thin;
+    scrollbar-color: #6c757d #e9ecef;
+}
+
+.template-list::-webkit-scrollbar,
+#notifications-form .form-select[multiple]::-webkit-scrollbar {
+    width: 8px;
+}
+
+.template-list::-webkit-scrollbar-track,
+#notifications-form .form-select[multiple]::-webkit-scrollbar-track {
+    background: #f1f3f5;
+}
+
+.template-list::-webkit-scrollbar-thumb,
+#notifications-form .form-select[multiple]::-webkit-scrollbar-thumb {
+    background-color: #6c757d;
+    border-radius: 4px;
+}

@@ -1,0 +1,404 @@
+/**
+ * Watsonx for IPG Testing - Test Execution Module
+ * CSS for styling test execution interfaces
+ */
+
+/* ============================================
+   Summary Dashboard Cards
+   ============================================ */
+   .summary-card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    overflow: hidden;
+}
+
+.summary-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.summary-card .card-body {
+    padding: 1rem;
+}
+
+.card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.card-icon i {
+    font-size: 1.5rem;
+    color: white;
+}
+
+.total-icon {
+    background-color: #6366f1;
+}
+
+.running-icon {
+    background-color: #f59e0b;
+}
+
+.success-icon {
+    background-color: #10b981;
+}
+
+.failed-icon {
+    background-color: #ef4444;
+}
+
+.summary-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    line-height: 1;
+}
+
+.summary-label {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+/* ============================================
+   Tab Navigation
+   ============================================ */
+.nav-tabs {
+    border-bottom: none;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    padding: 1rem 1.5rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #3b82f6;
+    border-bottom: 3px solid #3b82f6;
+    background-color: transparent;
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+    color: #1e40af;
+    border-bottom: 3px solid #93c5fd;
+    background-color: transparent;
+}
+
+/* ============================================
+   Test Case Selection Table
+   ============================================ */
+#execution-test-cases-table th,
+#execution-test-cases-table td {
+    vertical-align: middle;
+}
+
+.filters-section {
+    background-color: #f9fafb;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+.table .badge {
+    font-size: 0.75rem;
+}
+
+/* ============================================
+   Execution Configuration Card
+   ============================================ */
+.sticky-top {
+    z-index: 100;
+    top: 20px;
+}
+
+.selected-cases-summary {
+    background-color: #f9fafb;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+/* ============================================
+   Execution Dashboard Table
+   ============================================ */
+#execution-runs-table th,
+#execution-runs-table td {
+    vertical-align: middle;
+}
+
+.progress {
+    height: 10px;
+    border-radius: 10px;
+    background-color: #e5e7eb;
+}
+
+.progress-bar-animated {
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+.progress-bar-striped {
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+    background-size: 1rem 1rem;
+}
+
+/* ============================================
+   Active Execution Monitor
+   ============================================ */
+.active-execution-container {
+    padding: 0.5rem;
+}
+
+.active-execution-item {
+    background-color: #f9fafb;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.execution-log {
+    font-family: monospace;
+    font-size: 0.875rem;
+    background-color: #f1f5f9;
+    height: 100px;
+    overflow-y: auto;
+    border-radius: 4px;
+    padding: 0.5rem;
+}
+
+.log-entry {
+    padding: 0.125rem 0;
+}
+
+.log-entry .badge {
+    font-size: 0.7rem;
+}
+
+/* ============================================
+   Upload Manual Results
+   ============================================ */
+.upload-area {
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.upload-area:hover,
+.bg-light-hover {
+    background-color: #f3f4f6 !important;
+    border-color: #94a3b8;
+}
+
+.upload-area i {
+    color: #64748b;
+}
+
+.run-details-preview {
+    margin-bottom: 1.5rem;
+}
+
+.upload-summary {
+    margin-top: 1.5rem;
+}
+
+.issues-section {
+    background-color: #fff1f2;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #e11d48;
+}
+
+/* ============================================
+   Modal Styles
+   ============================================ */
+.modal-xl {
+    max-width: 1140px;
+}
+
+.modal .card {
+    box-shadow: none;
+    margin-bottom: 1rem;
+}
+
+.result-summary-cards .card {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #f3f4f6;
+    color: #1e40af;
+}
+
+.code-snippet, .code-suggestion {
+    background-color: #f3f4f6;
+    border-radius: 4px;
+    padding: 0.5rem;
+    font-family: monospace;
+    font-size: 0.875rem;
+    overflow-x: auto;
+}
+
+.accordion-item {
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.chart-placeholder, .screenshot-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f3f4f6;
+    border-radius: 8px;
+    color: #6b7280;
+    padding: 1rem;
+}
+
+/* ============================================
+   Status Colors & Badges
+   ============================================ */
+.bg-success-subtle {
+    background-color: #d1fae5;
+}
+
+.bg-danger-subtle {
+    background-color: #fee2e2;
+}
+
+.bg-warning-subtle {
+    background-color: #fef3c7;
+}
+
+/* ============================================
+   Toast Notifications
+   ============================================ */
+#toast-container {
+    z-index: 1050;
+}
+
+.toast {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+@media (max-width: 991.98px) {
+    .nav-tabs .nav-link {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .summary-card .card-body {
+        padding: 0.75rem;
+    }
+    
+    .card-icon {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .summary-value {
+        font-size: 1.5rem;
+    }
+    
+    .table-responsive {
+        max-height: 400px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .summary-card {
+        margin-bottom: 1rem;
+    }
+    
+    .nav-tabs .nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+    }
+    
+    .filters-section .row {
+        margin-bottom: 0;
+    }
+    
+    .filters-section .col-md-6,
+    .filters-section .col-md-3 {
+        margin-bottom: 0.5rem;
+    }
+    
+    .active-execution-item {
+        padding: 0.75rem;
+    }
+    
+    .execution-log {
+        height: 80px;
+    }
+}
+
+/* ============================================
+   Animation Effects
+   ============================================ */
+.opacity-50 {
+    opacity: 0.5;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.fa-spin {
+    animation: fa-spin 2s infinite linear;
+}
+
+@keyframes fa-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* ============================================
+   Additional Utility Classes
+   ============================================ */
+.text-success {
+    color: #10b981 !important;
+}
+
+.text-danger {
+    color: #ef4444 !important;
+}
+
+.text-warning {
+    color: #f59e0b !important;
+}
+
+.text-info {
+    color: #3b82f6 !important;
+}
+
+.text-secondary {
+    color: #6b7280 !important;
+}
+
+.bg-light {
+    background-color: #f9fafb !important;
+}
+
+/* For the report detail accordion */
+.collapse {
+    transition: all 0.2s ease;
+}

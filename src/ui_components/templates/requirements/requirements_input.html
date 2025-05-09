@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'requirements/css/requirements.css' %}">
+<link rel="stylesheet" href="{% static 'css/requirements/requirements.css' %}">
 {% endblock %}
 
 {% block content_title %}Requirements Ingestion{% endblock %}
@@ -278,4 +278,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+{% endblock %}
+
+{% block extraa_js %}
+<script src="{% static 'js/requirements/requirements.js' %}"></script>
 {% endblock %}

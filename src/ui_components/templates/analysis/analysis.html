@@ -1,0 +1,512 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Analysis - Watsonx for IPG Testing{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/analysis/analysis.css' %}">
+{% endblock %}
+
+{% block content_title %}Analysis & Defects{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'ui_components:dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Analysis</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Analysis Tab Navigation -->
+    <div class="col-12 mb-4">
+        <ul class="nav nav-tabs" id="analysisTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="failed-test-tab" data-bs-toggle="tab" data-bs-target="#failed-test" type="button" role="tab" aria-controls="failed-test" aria-selected="true">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Failed Test Analysis
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="defect-tracker-tab" data-bs-toggle="tab" data-bs-target="#defect-tracker" type="button" role="tab" aria-controls="defect-tracker" aria-selected="false">
+                    <i class="fas fa-bug me-2"></i>Defect Tracker
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="col-12">
+        <div class="tab-content" id="analysisTabContent">
+            <!-- Failed Test Analysis Tab -->
+            <div class="tab-pane fade show active" id="failed-test" role="tabpanel" aria-labelledby="failed-test-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Recent Failed Test Steps</h5>
+                            <div class="filter-controls">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search failed tests..." id="searchFailedTests">
+                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Filter</button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><h6 class="dropdown-header">Filter by:</h6></li>
+                                        <li><a class="dropdown-item" href="#" data-filter="all">All Failed Tests</a></li>
+                                        <li><a class="dropdown-item" href="#" data-filter="today">Today's Failures</a></li>
+                                        <li><a class="dropdown-item" href="#" data-filter="week">This Week</a></li>
+                                        <li><a class="dropdown-item" href="#" data-filter="unanalyzed">Unanalyzed</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><h6 class="dropdown-header">Sort by:</h6></li>
+                                        <li><a class="dropdown-item" href="#" data-sort="newest">Newest First</a></li>
+                                        <li><a class="dropdown-item" href="#" data-sort="severity">Severity</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover failed-tests-table" id="failedTestsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Test Case ID</th>
+                                        <th>Step #</th>
+                                        <th>Error Message</th>
+                                        <th>Date/Time</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Sample failed test data - will be populated dynamically -->
+                                    <tr class="test-failure" data-test-id="TC-1001" data-step="3">
+                                        <td>TC-1001</td>
+                                        <td>3</td>
+                                        <td>Element not found: login_button</td>
+                                        <td>May 7, 2025 14:23</td>
+                                        <td><span class="badge bg-danger">Unanalyzed</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary analyze-btn" data-test-id="TC-1001" data-step="3">
+                                                <i class="fas fa-brain me-1"></i> Analyze
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary view-screenshot-btn" data-bs-toggle="modal" data-bs-target="#screenshotModal" data-test-id="TC-1001" data-step="3">
+                                                <i class="fas fa-image"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="test-failure" data-test-id="TC-1002" data-step="5">
+                                        <td>TC-1002</td>
+                                        <td>5</td>
+                                        <td>Assertion failed: Expected "Welcome" text not found</td>
+                                        <td>May 7, 2025 15:45</td>
+                                        <td><span class="badge bg-warning">Analyzing</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary analyze-btn" data-test-id="TC-1002" data-step="5">
+                                                <i class="fas fa-brain me-1"></i> Analyze
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary view-screenshot-btn" data-bs-toggle="modal" data-bs-target="#screenshotModal" data-test-id="TC-1002" data-step="5">
+                                                <i class="fas fa-image"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="test-failure" data-test-id="TC-2053" data-step="12">
+                                        <td>TC-2053</td>
+                                        <td>12</td>
+                                        <td>Timeout error: Operation took too long to complete</td>
+                                        <td>May 8, 2025 09:17</td>
+                                        <td><span class="badge bg-info">Analyzed</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary analyze-btn" data-test-id="TC-2053" data-step="12">
+                                                <i class="fas fa-brain me-1"></i> Analyze
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary view-screenshot-btn" data-bs-toggle="modal" data-bs-target="#screenshotModal" data-test-id="TC-2053" data-step="12">
+                                                <i class="fas fa-image"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Analysis Panel (initially hidden) -->
+                <div class="card mt-4 analysis-panel" id="analysisPanel" style="display: none;">
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-brain me-2"></i>
+                                AI Analysis for Test Case <span id="analysisTcId">TC-1001</span>, Step <span id="analysisStepNum">3</span>
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" id="closeAnalysisPanel" aria-label="Close"></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="analysis-section mb-4">
+                                    <h6 class="section-title">
+                                        <i class="fas fa-exclamation-circle me-2"></i>Error Details
+                                    </h6>
+                                    <div class="error-details p-3 bg-light rounded">
+                                        <p class="mb-2"><strong>Test Case:</strong> <span id="tcDetailsId">TC-1001</span></p>
+                                        <p class="mb-2"><strong>Test Name:</strong> <span id="tcDetailsName">Verify Login Functionality</span></p>
+                                        <p class="mb-2"><strong>Step:</strong> <span id="tcDetailsStep">3</span> - <span id="tcDetailsStepDesc">Click on login button after entering credentials</span></p>
+                                        <p class="mb-2"><strong>Error:</strong> <span id="tcDetailsError" class="text-danger">Element not found: login_button</span></p>
+                                        <p class="mb-0"><strong>Execution Time:</strong> <span id="tcDetailsTime">May 7, 2025 14:23</span></p>
+                                    </div>
+                                </div>
+
+                                <div class="analysis-section mb-4">
+                                    <h6 class="section-title">
+                                        <i class="fas fa-search me-2"></i>Root Cause Analysis
+                                    </h6>
+                                    <div class="root-cause p-3 bg-light rounded">
+                                        <div class="potential-causes mb-3">
+                                            <h6>Potential Causes:</h6>
+                                            <ul id="potentialCauses">
+                                                <li><strong>ID Changed:</strong> The login button's ID may have been updated in the latest build</li>
+                                                <li><strong>Loading Issue:</strong> The login form might not have fully loaded before the test attempted to click the button</li>
+                                                <li><strong>Visibility Problem:</strong> The button might be present in DOM but not visible/clickable (CSS issue)</li>
+                                            </ul>
+                                        </div>
+                                        <div class="most-likely">
+                                            <h6>Most Likely Cause:</h6>
+                                            <p id="mostLikelyCause" class="p-2 border-start border-4 border-warning">
+                                                Based on log analysis and recent code changes, the login button ID was changed from "login_button" to "btn-login" in the latest sprint (JIRA-123).
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="analysis-section mb-4">
+                                    <h6 class="section-title">
+                                        <i class="fas fa-code me-2"></i>Relevant Log Snippets
+                                    </h6>
+                                    <div class="log-snippets p-3 bg-dark text-light rounded code-font">
+                                        <pre id="logSnippets">2025-05-07 14:23:01 INFO: Navigating to login page
+2025-05-07 14:23:02 INFO: Entering username 'testuser'
+2025-05-07 14:23:03 INFO: Entering password '********'
+2025-05-07 14:23:03 DEBUG: Attempting to find element: login_button
+2025-05-07 14:23:06 ERROR: NoSuchElementException: Unable to locate element: {"method":"id","selector":"login_button"}
+2025-05-07 14:23:06 DEBUG: Page source: &lt;div class="login-form"&gt;...&lt;button id="btn-login"&gt;Login&lt;/button&gt;...&lt;/div&gt;</pre>
+                                    </div>
+                                </div>
+
+                                <div class="analysis-section mb-4">
+                                    <h6 class="section-title">
+                                        <i class="fas fa-tools me-2"></i>Remediation Strategy
+                                    </h6>
+                                    <div class="remediation p-3 bg-light rounded">
+                                        <div class="debugging-steps mb-3">
+                                            <h6>Suggested Debugging Steps:</h6>
+                                            <ol id="debuggingSteps">
+                                                <li>Verify the current ID of the login button in the application</li>
+                                                <li>Check recent code changes affecting the login form</li>
+                                                <li>Update the test script to use the new button ID</li>
+                                                <li>Consider adding wait conditions to ensure elements are fully loaded</li>
+                                            </ol>
+                                        </div>
+                                        <div class="fix-recommendation">
+                                            <h6>Recommended Fix:</h6>
+                                            <p id="fixRecommendation" class="p-2 border-start border-4 border-success">
+                                                Update test script to use the new ID: <code>btn-login</code> instead of <code>login_button</code>. Alternatively, consider using more robust selectors like XPath that include multiple attributes.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#createDefectModal">
+                                        <i class="fas fa-bug me-2"></i>Create Defect
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Defect Tracker Tab -->
+            <div class="tab-pane fade" id="defect-tracker" role="tabpanel" aria-labelledby="defect-tracker-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Defect Tracker</h5>
+                            <div class="filter-controls">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search defects..." id="searchDefects">
+                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Filter</button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><h6 class="dropdown-header">Filter by:</h6></li>
+                                        <li><a class="dropdown-item" href="#" data-defect-filter="all">All Defects</a></li>
+                                        <li><a class="dropdown-item" href="#" data-defect-filter="open">Open</a></li>
+                                        <li><a class="dropdown-item" href="#" data-defect-filter="inprogress">In Progress</a></li>
+                                        <li><a class="dropdown-item" href="#" data-defect-filter="resolved">Resolved</a></li>
+                                        <li><a class="dropdown-item" href="#" data-defect-filter="closed">Closed</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><h6 class="dropdown-header">Sort by:</h6></li>
+                                        <li><a class="dropdown-item" href="#" data-defect-sort="newest">Newest First</a></li>
+                                        <li><a class="dropdown-item" href="#" data-defect-sort="severity">Severity</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover defects-table" id="defectsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Summary</th>
+                                        <th>Related Test</th>
+                                        <th>Severity</th>
+                                        <th>Assignee</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Sample defect data - will be populated dynamically -->
+                                    <tr class="defect-row" data-defect-id="JIRA-456">
+                                        <td>JIRA-456</td>
+                                        <td>Login button not found - ID changed</td>
+                                        <td>TC-1001</td>
+                                        <td><span class="badge bg-warning">Medium</span></td>
+                                        <td>John Developer</td>
+                                        <td><span class="badge bg-primary">In Progress</span></td>
+                                        <td>May 7, 2025</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info view-defect-btn" data-defect-id="JIRA-456">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <a href="#" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr class="defect-row" data-defect-id="JIRA-457">
+                                        <td>JIRA-457</td>
+                                        <td>Welcome text not displayed after login</td>
+                                        <td>TC-1002</td>
+                                        <td><span class="badge bg-danger">High</span></td>
+                                        <td>Sarah QA Lead</td>
+                                        <td><span class="badge bg-success">Resolved</span></td>
+                                        <td>May 7, 2025</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info view-defect-btn" data-defect-id="JIRA-457">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <a href="#" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr class="defect-row" data-defect-id="JIRA-458">
+                                        <td>JIRA-458</td>
+                                        <td>Timeout error during profile page load</td>
+                                        <td>TC-2053</td>
+                                        <td><span class="badge bg-danger">High</span></td>
+                                        <td>Michael PM</td>
+                                        <td><span class="badge bg-secondary">Open</span></td>
+                                        <td>May 8, 2025</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info view-defect-btn" data-defect-id="JIRA-458">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <a href="#" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Screenshot Modal -->
+<div class="modal fade" id="screenshotModal" tabindex="-1" aria-labelledby="screenshotModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="screenshotModalLabel">Screenshot: Test Case <span id="screenshotTcId">TC-1001</span>, Step <span id="screenshotStepNum">3</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <!-- Placeholder image - would be dynamically replaced -->
+                    <img src="{% static 'img/sample-error-screenshot.png' %}" alt="Error Screenshot" class="img-fluid rounded shadow" id="errorScreenshot">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Download</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Defect Modal -->
+<div class="modal fade" id="createDefectModal" tabindex="-1" aria-labelledby="createDefectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="createDefectModalLabel">
+                    <i class="fas fa-bug me-2"></i>Create Defect
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="defectForm">
+                    <div class="mb-3">
+                        <label for="defectSystem" class="form-label">Defect System</label>
+                        <select class="form-select" id="defectSystem" required>
+                            <option value="jira" selected>Jira</option>
+                            <option value="alm">ALM</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="defectSummary" class="form-label">Summary</label>
+                        <input type="text" class="form-control" id="defectSummary" value="Test Case TC-1001 failed at step 3: Element not found: login_button" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="defectDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="defectDescription" rows="4" required>Test Case: TC-1001 - Verify Login Functionality
+Step 3: Click on login button after entering credentials
+Error: Element not found: login_button
+Execution Time: May 7, 2025 14:23</textarea>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="defectSeverity" class="form-label">Severity</label>
+                            <select class="form-select" id="defectSeverity" required>
+                                <option value="minor">Minor</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="major">Major</option>
+                                <option value="critical">Critical</option>
+                                <option value="blocker">Blocker</option>
+                            </select>
+                            <small class="text-muted">AI Suggested: Medium</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="defectPriority" class="form-label">Priority</label>
+                            <select class="form-select" id="defectPriority" required>
+                                <option value="lowest">Lowest</option>
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="highest">Highest</option>
+                            </select>
+                            <small class="text-muted">AI Suggested: Medium</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="defectAssignee" class="form-label">Assignee</label>
+                            <select class="form-select" id="defectAssignee" required>
+                                <option value="john.doe">John Doe (Developer)</option>
+                                <option value="jane.smith">Jane Smith (QA Lead)</option>
+                                <option value="mike.johnson" selected>Mike Johnson (Developer)</option>
+                                <option value="sara.williams">Sara Williams (Project Manager)</option>
+                            </select>
+                            <small class="text-muted">Based on predefined assignment rules</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="defectEnvironment" class="form-label">Environment</label>
+                            <select class="form-select" id="defectEnvironment" required>
+                                <option value="dev">Development</option>
+                                <option value="test" selected>Test</option>
+                                <option value="staging">Staging</option>
+                                <option value="prod">Production</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="defectAttachments" class="form-label">Attachments</label>
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-image me-2"></i>
+                                <span>error-screenshot-TC1001-Step3.png</span>
+                                <button type="button" class="btn btn-sm btn-link ms-auto">Remove</button>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file-code me-2"></i>
+                                <span>test-execution-log-TC1001.txt</span>
+                                <button type="button" class="btn btn-sm btn-link ms-auto">Remove</button>
+                            </div>
+                            <hr>
+                            <div class="mb-3">
+                                <label for="additionalAttachments" class="form-label">Add More Attachments</label>
+                                <input class="form-control" type="file" id="additionalAttachments" multiple>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="defectAdditionalInfo" class="form-label">Additional Information</label>
+                        <textarea class="form-control" id="defectAdditionalInfo" rows="2" placeholder="Any additional context or information for the developer"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="submitDefectBtn">
+                    <i class="fas fa-paper-plane me-2"></i>Submit Defect to <span id="targetSystem">Jira</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Defect Details Modal -->
+<div class="modal fade" id="defectDetailsModal" tabindex="-1" aria-labelledby="defectDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="defectDetailsModalLabel">Defect Details: <span id="detailsDefectId">JIRA-456</span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5 id="detailsDefectSummary">Login button not found - ID changed</h5>
+                        <div class="mb-3">
+                            <span class="badge bg-warning me-2">Medium</span>
+                            <span class="badge bg-primary">In Progress</span>
+                        </div>
+                        <p class="text-muted">Created by: AI Assistant on May 7, 2025</p>
+                        <hr>
+                        <h6>Description</h6>
+                        <div class="p-3 bg-light rounded mb-3">
+                            <p id="detailsDefectDescription">Test Case: TC-1001 - Verify Login Functionality
+Step 3: Click on login button after entering credentials
+Error: Element not found: login_button
+Execution Time: May 7, 2025 14:23</p>
+                        </div>
+                        <h6>Recent Comments</h6>
+                        <div class="defect-comments mb-3">
+                            <div class="comment p-2 border-start border-3 border-secondary mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <strong>John Developer</strong>
+                                    <small class="text-muted">May 7, 2025, 16:30</small>
+                                </div>
+                                <p class="mb-0">Investigating this issue. The login button ID was changed in the latest sprint. Will update the test script.</p>
+                            </div>
+                            <div class="comment p-2 border-start border-3 border-secondary mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <strong>Sarah QA Lead</strong>
+                                    <small class="text-muted">May 8, 2025, 09:15</small>
+                                </div>
+                                <p class="mb-0">We should add a regression test to ensure IDs don't change without proper notice to the QA team.</p>
+                            </div>
+                        </div>
+                    </div>
+{% endblock %}    
+
+{% block extra_js %}
+<script src="{% static 'js/analysis/analysis.js' %}"></script>
+{% endblock %}

@@ -3,6 +3,8 @@
 
 import io
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from setuptools import find_packages, setup
 
 # Package meta-data

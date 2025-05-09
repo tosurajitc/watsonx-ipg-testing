@@ -163,7 +163,7 @@
                     <p class="text-muted">Analyze and enhance existing test cases with AI suggestions.</p>
                 </div>
                 <div class="card-body">
-                    <form id="refineTestCaseForm" method="post" action="{% url 'ui_components:test_generation_refine' %}" enctype="multipart/form-data">
+                    <form id="refineTestCaseForm" method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         
                         <!-- File Upload Area -->
@@ -195,7 +195,7 @@
                         <!-- Action Buttons -->
                         <div class="form-actions">
                             <button type="button" id="analyzeTestCaseBtn" class="btn btn-primary" disabled>
-                                <i class="fas fa-search"></i> Analyze & Suggest Refinements
+                                <i class="fas fa-search"></i> Analyze Test Case
                             </button>
                             <button type="button" id="cancelRefineBtn" class="btn btn-secondary ms-2">
                                 <i class="fas fa-times"></i> Cancel
@@ -250,10 +250,14 @@
                                     <!-- Action Buttons -->
                                     <div class="refinement-actions mt-4">
                                         <button type="button" id="acceptSuggestionsBtn" class="btn btn-success">
-                                            <i class="fas fa-check"></i> Accept Suggestions & Update Repository
+                                            <i class="fas fa-check"></i> Accept & Update
+                                        </button>
+                                        <!-- Add this button to the refinement-actions div -->
+                                        <button type="button" id="downloadRefinedBtn" class="btn btn-primary ms-2">
+                                            <i class="fas fa-download"></i> Download
                                         </button>
                                         <button type="button" id="notifyOwnerBtn" class="btn btn-info ms-2">
-                                            <i class="fas fa-bell"></i> Notify Owner of Suggestions
+                                            <i class="fas fa-bell"></i> Notify Owner
                                         </button>
                                         <button type="button" id="markObsoleteBtn" class="btn btn-warning ms-2">
                                             <i class="fas fa-archive"></i> Mark as Obsolete
@@ -278,392 +282,19 @@
 <script src="{% static 'js/test_generation/api_service.js' %}"></script>
 <script src="{% static 'js/test_generation/generate_test_cases.js' %}"></script>
 <script src="{% static 'js/test_generation/test_generation_main.js' %}"></script>
+<script src="{% static 'js/test_generation/refine_test_cases.js' %}"></script>
+{% endblock %}
 
-<!-- File Upload Script for Review & Refine Tab -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('File upload script loaded');
-    
-    // Get elements
-    const dropArea = document.getElementById('refinement-drop-area');
-    const fileInput = document.getElementById('test_case_file');
-    const filePreview = document.getElementById('refinement-file-preview');
-    const fileName = document.getElementById('refinement-file-name');
-    const fileSize = document.getElementById('refinement-file-size');
-    const removeFileBtn = document.getElementById('refinement-remove-file');
-    const analyzeBtn = document.getElementById('analyzeTestCaseBtn');
-    
-    console.log('File upload elements:', {
-        dropArea: !!dropArea,
-        fileInput: !!fileInput,
-        filePreview: !!filePreview,
-        fileName: !!fileName,
-        fileSize: !!fileSize,
-        removeFileBtn: !!removeFileBtn,
-        analyzeBtn: !!analyzeBtn
-    });
-    
-    // Check if required elements exist
-    if (!dropArea || !fileInput) {
-        console.error('Required file upload elements not found');
-        return;
-    }
-    
-    // File Input Change Event
-    fileInput.addEventListener('change', function() {
-        console.log('File input changed');
-        if (this.files && this.files.length > 0) {
-            const file = this.files[0];
-            console.log('File selected:', file.name);
-            updateFilePreview(file);
-        }
-    });
-    
-    // Click to browse
-    dropArea.addEventListener('click', function() {
-        console.log('Drop area clicked');
-        fileInput.click();
-    });
-    
-    // Prevent default behaviors for drag events
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropArea.addEventListener(eventName, function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }, false);
-    });
-    
-    // Highlight drop area when file is dragged over
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropArea.addEventListener(eventName, function() {
-            console.log('File dragged over drop area');
-            this.classList.add('dragover');
-        });
-    });
-    
-    // Remove highlight when file leaves drop area
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropArea.addEventListener(eventName, function() {
-            console.log('File left drop area');
-            this.classList.remove('dragover');
-        });
-    });
-    
-    // Handle file drop
-    dropArea.addEventListener('drop', function(e) {
-        console.log('File dropped');
-        if (e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-            console.log('File dropped:', file.name);
-            
-            if (isValidFileType(file)) {
-                // Set the file to the file input
-                fileInput.files = e.dataTransfer.files;
-                updateFilePreview(file);
-            } else {
-                alert('Invalid file type. Please upload an Excel or Word file.');
-            }
-        }
-    });
-    
-    // Handle file removal
-    if (removeFileBtn) {
-        removeFileBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Remove file button clicked');
-            removeFile();
-        });
-    }
-    
-    // Analyze button click handler
-    if (analyzeBtn) {
-        analyzeBtn.addEventListener('click', function() {
-            console.log('Analyze button clicked');
-            
-            // Show progress indicator
-            const progress = document.getElementById('refinementProgress');
-            if (progress) {
-                progress.classList.remove('d-none');
-            }
-            
-            // Disable button during processing
-            this.disabled = true;
-            
-            // Simulate processing (in real implementation, this would call the API)
-            setTimeout(function() {
-                // Hide progress indicator
-                if (progress) {
-                    progress.classList.add('d-none');
-                }
-                
-                // Show comparison view
-                const comparison = document.getElementById('refinementComparison');
-                if (comparison) {
-                    comparison.classList.remove('d-none');
-                }
-                
-                // Re-enable button
-                analyzeBtn.disabled = false;
-                
-                // Display example data (in real implementation, this would come from the API)
-                displayExampleResults();
-            }, 2000);
-        });
-    }
-    
-    // Function to display example results
-    function displayExampleResults() {
-        const originalTestCase = document.getElementById('originalTestCase');
-        const refinedTestCase = document.getElementById('refinedTestCase');
-        const aiSuggestions = document.getElementById('aiSuggestions');
-        
-        if (originalTestCase) {
-            originalTestCase.innerHTML = `
-                <div class="test-case-info mb-3">
-                    <p><strong>ID:</strong> TC-1234</p>
-                    <p><strong>Name:</strong> Login Test Case</p>
-                </div>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Step</th>
-                            <th>Description</th>
-                            <th>Expected Result</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td>Go to the login page</td>
-                            <td>Login form appears</td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>Enter login credentials</td>
-                            <td>User logged in</td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td>Check dashboard</td>
-                            <td>Dashboard displays</td>
-                        </tr>
-                    </tbody>
-                </table>
-            `;
-        }
-        
-        if (refinedTestCase) {
-            refinedTestCase.innerHTML = `
-                <div class="test-case-info mb-3">
-                    <p><strong>ID:</strong> TC-1234</p>
-                    <p><strong>Name:</strong> Login Test Case</p>
-                </div>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Step</th>
-                            <th>Description</th>
-                            <th>Expected Result</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td class="bg-warning">Navigate to the login page by clicking Login button</td>
-                            <td class="bg-warning">Login page is displayed with username and password fields</td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td class="bg-warning">Enter valid username and password credentials</td>
-                            <td class="bg-warning">Credentials are accepted and user is logged in successfully</td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td class="bg-warning">Verify dashboard elements</td>
-                            <td class="bg-warning">Dashboard displays with user information and expected widgets</td>
-                        </tr>
-                        <tr class="table-success">
-                            <td>4</td>
-                            <td>Click logout button</td>
-                            <td>User is logged out and redirected to login page</td>
-                        </tr>
-                    </tbody>
-                </table>
-            `;
-        }
-        
-        if (aiSuggestions) {
-            aiSuggestions.innerHTML = `
-                <div>
-                    <h6>Analysis Summary</h6>
-                    <p>Test case has a completeness score of 65%. Several improvements would enhance test coverage and clarity.</p>
-                    
-                    <h6 class="mt-3">Key Improvements</h6>
-                    <ul>
-                        <li>Added more specific details to each step for better test execution</li>
-                        <li>Enhanced expected results with clearer success criteria</li>
-                        <li>Added logout step to complete the test flow (proper teardown)</li>
-                    </ul>
-                    
-                    <h6 class="mt-3">Missing Test Variations</h6>
-                    <ul>
-                        <li>Consider adding test cases for invalid login credentials</li>
-                        <li>Consider adding test cases for password reset functionality</li>
-                    </ul>
-                </div>
-            `;
-        }
-    }
-    
-    // Update file preview
-    function updateFilePreview(file) {
-        if (!filePreview || !fileName || !fileSize) {
-            console.error('Required preview elements not found');
-            return;
-        }
-        
-        // Update file info
-        fileName.textContent = file.name;
-        fileSize.textContent = formatFileSize(file.size);
-        
-        // Show file preview, hide drop area
-        filePreview.classList.remove('d-none');
-        dropArea.style.display = 'none';
-        
-        // Enable analyze button
-        if (analyzeBtn) {
-            analyzeBtn.disabled = false;
-        }
-    }
-    
-    // Remove file
-    function removeFile() {
-        // Clear file input
-        if (fileInput) {
-            fileInput.value = '';
-        }
-        
-        // Hide preview, show drop area
-        if (filePreview) {
-            filePreview.classList.add('d-none');
-        }
-        if (dropArea) {
-            dropArea.style.display = 'flex';
-        }
-        
-        // Disable analyze button
-        if (analyzeBtn) {
-            analyzeBtn.disabled = true;
-        }
-        
-        // Hide comparison view
-        const comparison = document.getElementById('refinementComparison');
-        if (comparison && !comparison.classList.contains('d-none')) {
-            comparison.classList.add('d-none');
-        }
-    }
-    
-    // Check if file type is valid
-    function isValidFileType(file) {
-        const validTypes = [
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        ];
-        
-        const validExtensions = ['.xlsx', '.xls', '.docx', '.doc'];
-        
-        // Check by MIME type
-        if (validTypes.includes(file.type)) {
-            return true;
-        }
-        
-        // Check by file extension as fallback
-        const fileName = file.name || '';
-        const fileExt = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-        
-        return validExtensions.includes(fileExt);
-    }
-    
-    // Format file size
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-    
-    // Set up action buttons
-    const cancelBtn = document.getElementById('cancelRefineBtn');
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', function() {
-            removeFile();
-        });
-    }
-    
-    const acceptBtn = document.getElementById('acceptSuggestionsBtn');
-    if (acceptBtn) {
-        acceptBtn.addEventListener('click', function() {
-            alert('Suggestions accepted and repository updated!');
-            // In a real implementation, this would call the API
-            removeFile();
-        });
-    }
-    
-    const notifyBtn = document.getElementById('notifyOwnerBtn');
-    if (notifyBtn) {
-        notifyBtn.addEventListener('click', function() {
-            alert('Owner has been notified about the suggestions!');
-            // In a real implementation, this would call the API
-        });
-    }
-    
-    const markObsoleteBtn = document.getElementById('markObsoleteBtn');
-    if (markObsoleteBtn) {
-        markObsoleteBtn.addEventListener('click', function() {
-            if (confirm('Are you sure you want to mark this test case as obsolete?')) {
-                alert('Test case marked as obsolete. Owner has been notified.');
-                // In a real implementation, this would call the API
-                removeFile();
-            }
-        });
-    }
-    
-    const discardBtn = document.getElementById('discardSuggestionsBtn');
-    if (discardBtn) {
-        discardBtn.addEventListener('click', function() {
-            if (confirm('Are you sure you want to discard these suggestions?')) {
-                removeFile();
-            }
-        });
-    }
-    
-    // Set up tab navigation to ensure file upload is visible
-    const refineTab = document.getElementById('refine-tab');
-    if (refineTab) {
-        refineTab.addEventListener('shown.bs.tab', function() {
-            console.log('Refine tab shown');
-            // Ensure dropArea is visible when tab is shown
-            if (dropArea && (!fileInput || !fileInput.files || fileInput.files.length === 0)) {
-                dropArea.style.display = 'flex';
-            }
-        });
-    }
-});
-</script>
 
 
 <!-- EMERGENCY RADIO BUTTON FIX -->
 <script type="text/javascript">
+
   // This script runs immediately after the page loads
   (function() {
     console.log('*** EMERGENCY RADIO BUTTON FIX RUNNING ***');
     
+
     // Function to fix radio buttons
     function fixRadioButtons() {
       console.log('Running emergency radio button fix');
@@ -824,6 +455,3 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('load', fixRadioButtons);
   })();
 </script>
-
-
-{% endblock %}

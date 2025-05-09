@@ -17,7 +17,11 @@ from typing import Dict, List, Any, Tuple, Optional, Union, Set
 from datetime import datetime
 import re
 import uuid
-import sqlite3
+import psycopg2
+from psycopg2 import pool
+from psycopg2.extras import RealDictCursor, Json
+import dotenv
+from io import BytesIO
 
 # Import from src.common
 from src.common.utils.file_utils import read_file, write_file
@@ -30,6 +34,9 @@ from src.common.exceptions.custom_exceptions import (
 
 # Import from phase1
 from src.phase1.system_configuration.rule_engine import get_assignment_rules
+
+# Load environment variables
+dotenv.load_dotenv()
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -127,28 +134,50 @@ class MetadataManager:
                 "required": False,
                 "default": "Not Executed",
                 "description": "Result of the last execution"
+            },
+            "TEST_CASE_CONTENT": {
+                "type": "binary",
+                "required": False,
+                "description": "The actual content of the test case file (Excel, etc.)"
+            },
+            "FILE_NAME": {
+                "type": "string",
+                "required": False,
+                "description": "Original file name of the test case"
+            },
+            "FILE_TYPE": {
+                "type": "string",
+                "required": False,
+                "description": "File type/extension of the test case"
             }
         }
     }
     
-    def __init__(self, db_path: str = None, schema_path: str = None):
+    def __init__(self, schema_path: str = None, min_conn: int = 1, max_conn: int = 10):
         """
-        Initialize the MetadataManager with a database and schema.
+        Initialize the MetadataManager with PostgreSQL connection pool and schema.
         
         Args:
-            db_path (str, optional): Path to the SQLite database for metadata storage.
-                If None, uses a default path.
             schema_path (str, optional): Path to the metadata schema JSON file.
                 If None, uses the default schema.
+            min_conn (int, optional): Minimum number of connections in the pool.
+            max_conn (int, optional): Maximum number of connections in the pool.
         """
-        self.db_path = db_path or os.path.join(
-            os.path.dirname(__file__), "../../../storage/metadata/test_case_metadata.db"
-        )
         self.schema_path = schema_path
         self.logger = logging.getLogger(__name__)
         
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        # Load database configuration from environment variables
+        self.db_config = {
+            'host': os.getenv('DB_HOST', 'https://tldjlxdotaarczsdivav.supabase.co').replace('https://', ''),
+            'port': os.getenv('DB_PORT', '5432'),
+            'dbname': os.getenv('DB_NAME', 'watsonx_ipg_testing'),
+            'user': os.getenv('DB_USER', 'tosurajitc'),
+            'password': os.getenv('DB_PASSWORD', 'IpgTesting2025#'),
+            'sslmode': os.getenv('DB_SSL_MODE', 'require')
+        }
+        
+        # Alternative: use the DATABASE_URL if available
+        self.db_url = os.getenv('DATABASE_URL')
         
         # Load schema
         if schema_path and os.path.exists(schema_path):
@@ -157,11 +186,64 @@ class MetadataManager:
             self.schema = self.DEFAULT_SCHEMA
             self.logger.info("Using default metadata schema")
         
-        # Initialize database
-        self._init_database()
-        
-        self.logger.info(f"MetadataManager initialized with database at: {self.db_path}")
+        # Initialize connection pool
+        try:
+            if self.db_url:
+                self.connection_pool = pool.ThreadedConnectionPool(
+                    min_conn, max_conn, self.db_url
+                )
+                self.logger.info(f"Initialized connection pool using DATABASE_URL")
+            else:
+                self.connection_pool = pool.ThreadedConnectionPool(
+                    min_conn, max_conn,
+                    host=self.db_config['host'],
+                    port=self.db_config['port'],
+                    dbname=self.db_config['dbname'],
+                    user=self.db_config['user'],
+                    password=self.db_config['password'],
+                    sslmode=self.db_config['sslmode']
+                )
+                self.logger.info(f"Initialized connection pool to PostgreSQL database: {self.db_config['dbname']}")
+            
+            # Initialize the database tables
+            self._init_database()
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize PostgreSQL connection pool: {str(e)}")
+            raise DatabaseError(f"Failed to connect to PostgreSQL database: {str(e)}")
     
+    def _get_db_connection(self):
+        """
+        Get a connection from the pool.
+        
+        Returns:
+            Connection: PostgreSQL connection from the pool
+            
+        Raises:
+            DatabaseError: If unable to get a connection
+        """
+        try:
+            conn = self.connection_pool.getconn()
+            return conn
+        except Exception as e:
+            self.logger.error(f"Failed to get connection from pool: {str(e)}")
+            raise DatabaseError(f"Failed to get database connection: {str(e)}")
+    
+    def _return_db_connection(self, conn):
+        """
+        Return a connection to the pool.
+        
+        Args:
+            conn: The connection to return
+        """
+        try:
+            self.connection_pool.putconn(conn)
+        except Exception as e:
+            self.logger.error(f"Failed to return connection to pool: {str(e)}")
+            # Don't raise here, just log the error
+
+
+
     def _load_schema_from_file(self):
         """
         Load metadata schema from a JSON file.
@@ -190,103 +272,72 @@ class MetadataManager:
             self.logger.error(f"Failed to load schema: {str(e)}")
             self.schema = self.DEFAULT_SCHEMA
             self.logger.warning(f"Using default schema instead")
-    
+
+
     def _init_database(self):
         """
-        Initialize the SQLite database for metadata storage.
+        Initialize the PostgreSQL database for metadata storage.
         
-        Creates the necessary tables if they don't exist.
+        Connects to the existing 'test_cases' table instead of creating multiple tables.
         
         Raises:
             DatabaseError: If database initialization fails.
         """
+        conn = None
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_db_connection()
             cursor = conn.cursor()
             
-            # Create metadata table with dynamic columns based on schema
-            columns = ["id INTEGER PRIMARY KEY"]
+            # Check if the table exists
+            cursor.execute("""
+            SELECT * FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'test_cases';
+            """)
             
-            for field_name, field_def in self.schema["metadata_fields"].items():
-                field_type = field_def["type"]
+            table_exists = cursor.fetchone() is not None
+            
+            if not table_exists:
+                # If table doesn't exist, create it (as a fallback)
+                cursor.execute("""
+                CREATE TABLE test_cases (
+                    id SERIAL,
+                    TEST_CASE_NUMBER VARCHAR(100) NOT NULL,
+                    STEP_NO INTEGER NOT NULL,
+                    SUBJECT VARCHAR(255),
+                    TEST_CASE VARCHAR(255),
+                    TEST_STEP_DESCRIPTION TEXT,
+                    DATA TEXT,
+                    REFERENCE_VALUES TEXT,
+                    VALUES TEXT,
+                    EXPECTED_RESULT TEXT,
+                    TRANS_CODE VARCHAR(100),
+                    TEST_USER_ID_ROLE VARCHAR(100),
+                    STATUS VARCHAR(50),
+                    TYPE VARCHAR(100),
+                    CREATED_DATE TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    MODIFIED_DATE TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    
+                    CONSTRAINT unique_test_case_step UNIQUE (TEST_CASE_NUMBER, STEP_NO)
+                );
                 
-                # Map schema types to SQLite types
-                if field_type == "string":
-                    sql_type = "TEXT"
-                elif field_type == "enum":
-                    sql_type = "TEXT"
-                elif field_type == "date":
-                    sql_type = "TEXT"  # Store dates as ISO format strings
-                elif field_type == "number" or field_type == "integer":
-                    sql_type = "INTEGER"
-                elif field_type == "float" or field_type == "decimal":
-                    sql_type = "REAL"
-                elif field_type == "boolean":
-                    sql_type = "INTEGER"  # 0 or 1
-                elif field_type == "array":
-                    sql_type = "TEXT"  # Store as JSON
-                else:
-                    sql_type = "TEXT"  # Default
+                CREATE INDEX idx_test_case_number ON test_cases (TEST_CASE_NUMBER);
+                """)
                 
-                # Add column with NOT NULL if required
-                not_null = "NOT NULL" if field_def.get("required", False) else ""
-                columns.append(f"{field_name} {sql_type} {not_null}")
-            
-            # Create the main metadata table
-            create_table_sql = f"""
-            CREATE TABLE IF NOT EXISTS test_case_metadata (
-                {', '.join(columns)}
-            )
-            """
-            cursor.execute(create_table_sql)
-            
-            # Create index on TEST_CASE_ID for fast lookups
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_test_case_id ON test_case_metadata (TEST_CASE_ID)")
-            
-            # Create a history table to track metadata changes
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS metadata_history (
-                id INTEGER PRIMARY KEY,
-                test_case_id TEXT NOT NULL,
-                field_name TEXT NOT NULL,
-                old_value TEXT,
-                new_value TEXT,
-                changed_by TEXT,
-                changed_at TEXT NOT NULL,
-                FOREIGN KEY (test_case_id) REFERENCES test_case_metadata (TEST_CASE_ID)
-            )
-            """)
-            
-            # Create index on test_case_id in history table
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_history_test_case_id ON metadata_history (test_case_id)")
-            
-            # Create a tags table for many-to-many relationship
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tags (
-                id INTEGER PRIMARY KEY,
-                name TEXT UNIQUE NOT NULL
-            )
-            """)
-            
-            cursor.execute("""
-            CREATE TABLE IF NOT EXISTS test_case_tags (
-                test_case_id TEXT NOT NULL,
-                tag_id INTEGER NOT NULL,
-                PRIMARY KEY (test_case_id, tag_id),
-                FOREIGN KEY (test_case_id) REFERENCES test_case_metadata (TEST_CASE_ID),
-                FOREIGN KEY (tag_id) REFERENCES tags (id)
-            )
-            """)
+                self.logger.debug("Created test_cases table in PostgreSQL database")
             
             conn.commit()
-            conn.close()
-            
-            self.logger.debug("Database initialized successfully")
+            self.logger.debug("PostgreSQL database connection verified successfully")
             
         except Exception as e:
+            if conn:
+                conn.rollback()
             self.logger.error(f"Database initialization failed: {str(e)}")
             raise DatabaseError(f"Failed to initialize metadata database: {str(e)}")
-        
+        finally:
+            if conn:
+                self._return_db_connection(conn)
+
     def _validate_metadata(self, metadata: Dict[str, Any]) -> Tuple[bool, List[str]]:
         """
         Validate metadata against the schema.
@@ -341,11 +392,12 @@ class MetadataManager:
                     if not isinstance(value, (list, tuple, set)):
                         errors.append(f"Value for '{field_name}' must be an array")
         
-        return len(errors) == 0, errors
+        return len(errors) == 0, errors        
     
+
     def _serialize_metadata_value(self, value, field_type: str) -> Any:
         """
-        Serialize a metadata value for storage in the database.
+        Serialize a metadata value for storage in PostgreSQL.
         
         Args:
             value: The value to serialize.
@@ -359,22 +411,45 @@ class MetadataManager:
         
         if field_type == "date":
             if isinstance(value, datetime):
-                return value.isoformat()
+                return value  # PostgreSQL can handle datetime objects directly
+            elif isinstance(value, str):
+                # Convert ISO string to datetime
+                try:
+                    return datetime.fromisoformat(value.replace('Z', '+00:00'))
+                except ValueError:
+                    # If conversion fails, return as is
+                    return value
             return value
         
         elif field_type == "array":
             if isinstance(value, (list, tuple, set)):
-                return json.dumps(list(value))
-            return json.dumps([])
+                # PostgreSQL can handle lists directly for array types
+                return list(value)
+            elif isinstance(value, str):
+                # If it's a JSON string, parse it
+                try:
+                    return json.loads(value)
+                except:
+                    # If parsing fails, treat as a single-item array
+                    return [value]
+            return []
         
         elif field_type == "boolean":
-            return 1 if value else 0
+            return bool(value)
+        
+        elif field_type == "binary":
+            # For binary data, ensure it's in bytes format
+            if isinstance(value, bytes):
+                return value
+            elif isinstance(value, str):
+                return value.encode('utf-8')
+            return value
         
         return value
-    
+
     def _deserialize_metadata_value(self, value, field_type: str) -> Any:
         """
-        Deserialize a metadata value from the database.
+        Deserialize a metadata value from PostgreSQL.
         
         Args:
             value: The value to deserialize.
@@ -387,10 +462,20 @@ class MetadataManager:
             return None
         
         if field_type == "date":
-            return value  # Keep as ISO format string
+            # PostgreSQL timestamps come back as datetime objects
+            if isinstance(value, datetime):
+                return value.isoformat()
+            return value
         
         elif field_type == "array":
+            # Handle PostgreSQL array types
+            if isinstance(value, list):
+                return value
+            elif hasattr(value, '__iter__') and not isinstance(value, (str, bytes, dict)):
+                # Convert other iterable types to list
+                return list(value)
             try:
+                # Try to parse as JSON if it's a string
                 return json.loads(value)
             except:
                 return []
@@ -404,8 +489,12 @@ class MetadataManager:
         elif field_type == "number" or field_type == "float" or field_type == "decimal":
             return float(value) if value is not None else None
         
+        elif field_type == "binary":
+            # Binary data is already in bytes format from PostgreSQL
+            return value
+        
         return value
-    
+
     def _apply_defaults(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
         Apply default values from schema for missing fields.
@@ -423,16 +512,187 @@ class MetadataManager:
                 updated[field_name] = field_def["default"]
         
         return updated
-    
+
+    def _execute_query(self, query: str, params: tuple = None, fetch_one: bool = False, 
+                    fetch_all: bool = False, as_dict: bool = False) -> Any:
+        """
+        Execute a database query with proper connection handling.
+        
+        Args:
+            query (str): The SQL query to execute.
+            params (tuple, optional): Query parameters.
+            fetch_one (bool, optional): Whether to fetch one row.
+            fetch_all (bool, optional): Whether to fetch all rows.
+            as_dict (bool, optional): Whether to return results as dictionaries.
+            
+        Returns:
+            Any: Query results if fetch_one or fetch_all is True, else None.
+            
+        Raises:
+            DatabaseError: If query execution fails.
+        """
+        conn = None
+        try:
+            conn = self._get_db_connection()
+            
+            # Use RealDictCursor if dict results are requested
+            cursor_factory = RealDictCursor if as_dict else None
+            cursor = conn.cursor(cursor_factory=cursor_factory)
+            
+            # Execute query with parameters if provided
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            
+            # Fetch results if requested
+            result = None
+            if fetch_one:
+                result = cursor.fetchone()
+            elif fetch_all:
+                result = cursor.fetchall()
+            else:
+                # For INSERT/UPDATE/DELETE, get affected row count
+                result = cursor.rowcount
+            
+            conn.commit()
+            return result
+            
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            self.logger.error(f"Query execution failed: {str(e)}\nQuery: {query}\nParams: {params}")
+            raise DatabaseError(f"Database operation failed: {str(e)}")
+        finally:
+            if conn:
+                self._return_db_connection(conn)
+
+    def _execute_transaction(self, queries: List[Tuple[str, tuple]]) -> bool:
+        """
+        Execute multiple queries as a single transaction.
+        
+        Args:
+            queries (List[Tuple[str, tuple]]): List of (query, params) tuples.
+            
+        Returns:
+            bool: True if transaction succeeded, False otherwise.
+            
+        Raises:
+            DatabaseError: If transaction execution fails.
+        """
+        conn = None
+        try:
+            conn = self._get_db_connection()
+            cursor = conn.cursor()
+            
+            # Execute each query in the transaction
+            for query, params in queries:
+                cursor.execute(query, params)
+            
+            conn.commit()
+            return True
+            
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            self.logger.error(f"Transaction execution failed: {str(e)}")
+            raise DatabaseError(f"Transaction failed: {str(e)}")
+        finally:
+            if conn:
+                self._return_db_connection(conn)
+
+    def _store_test_case_file(self, test_case_id: str, file_name: str, file_content: bytes,
+                            file_type: str = None) -> bool:
+        """
+        Store a test case file in the database.
+        
+        Args:
+            test_case_id (str): The test case ID.
+            file_name (str): Original file name.
+            file_content (bytes): File content as bytes.
+            file_type (str, optional): File type/extension. If None, extracted from file_name.
+            
+        Returns:
+            bool: True if successful, False otherwise.
+            
+        Raises:
+            DatabaseError: If file storage fails.
+        """
+        try:
+            # Extract file type from file name if not provided
+            if not file_type and file_name:
+                file_type = os.path.splitext(file_name)[1].lstrip('.')
+            
+            # Ensure we have a file type
+            file_type = file_type or 'unknown'
+            
+            # Insert or update file content
+            query = """
+            INSERT INTO test_case_files (test_case_id, file_name, file_type, content, uploaded_at)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (test_case_id) DO UPDATE
+            SET file_name = EXCLUDED.file_name,
+                file_type = EXCLUDED.file_type,
+                content = EXCLUDED.content,
+                uploaded_at = EXCLUDED.uploaded_at
+            """
+            
+            params = (test_case_id, file_name, file_type, file_content, datetime.now())
+            self._execute_query(query, params)
+            
+            self.logger.info(f"Stored file '{file_name}' for test case {test_case_id}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to store test case file: {str(e)}")
+            raise DatabaseError(f"Failed to store test case file: {str(e)}")
+
+    def _retrieve_test_case_file(self, test_case_id: str) -> Tuple[str, str, bytes]:
+        """
+        Retrieve a test case file from the database.
+        
+        Args:
+            test_case_id (str): The test case ID.
+            
+        Returns:
+            Tuple[str, str, bytes]: (file_name, file_type, file_content)
+            
+        Raises:
+            DatabaseError: If file retrieval fails.
+        """
+        try:
+            query = """
+            SELECT file_name, file_type, content
+            FROM test_case_files
+            WHERE test_case_id = %s
+            """
+            
+            result = self._execute_query(query, (test_case_id,), fetch_one=True)
+            
+            if not result:
+                self.logger.warning(f"No file found for test case {test_case_id}")
+                return None, None, None
+            
+            file_name = result[0]
+            file_type = result[1]
+            file_content = result[2]
+            
+            return file_name, file_type, file_content
+            
+        except Exception as e:
+            self.logger.error(f"Failed to retrieve test case file: {str(e)}")
+            raise DatabaseError(f"Failed to retrieve test case file: {str(e)}")
+        
+
     def create_test_case_metadata(self, test_case_data: Dict[str, Any], 
-                                created_by: str = None) -> str:
+                            created_by: str = None) -> str:
         """
         Create metadata for a new test case.
         
         Args:
             test_case_data (Dict[str, Any]): Basic test case data, including at least:
-                                         - TEST_CASE_ID: Unique identifier
-                                         - Additional test case details
+                                        - TEST_CASE_ID: Unique identifier
+                                        - Additional test case details
             created_by (str, optional): Person creating the test case.
             
         Returns:
@@ -463,21 +723,24 @@ class MetadataManager:
                     owner = "Unassigned"
             
             # Build metadata
-            now = datetime.now().isoformat()
-            
+            now = datetime.now()
+
             metadata = {
-                "TEST_CASE_ID": test_case_id,
-                "OWNER": owner,
+                "TEST_CASE_NUMBER": test_case_id,
+                "STEP_NO": 1,  # Starting with step 1
+                "SUBJECT": test_case_data.get("SUBJECT", "Unknown"),
+                "TEST_CASE": test_case_data.get("TEST_CASE", ""),
+                "TEST_STEP_DESCRIPTION": "",  # Empty by default, will be filled later
+                "DATA": "",  # Empty by default
+                "REFERENCE_VALUES": "",  # Empty by default
+                "VALUES": "",  # Empty by default
+                "EXPECTED_RESULT": "",  # Empty by default
+                "TRANS_CODE": "",  # Empty by default
+                "TEST_USER_ID_ROLE": owner or test_case_data.get("TEST_USER_ID_ROLE", ""),
                 "STATUS": "Draft",
-                "PRIORITY": test_case_data.get("PRIORITY", "Medium"),
-                "AUTOMATION_STATUS": "Manual",  # Default to manual
+                "TYPE": test_case_data.get("TYPE", "Functional"),
                 "CREATED_DATE": now,
-                "MODIFIED_DATE": now,
-                "CREATED_BY": created_by or "System",
-                "MODIFIED_BY": created_by or "System",
-                "MODULE": test_case_data.get("MODULE") or test_case_data.get("SUBJECT", "Unknown"),
-                "TEST_TYPE": test_case_data.get("TEST_TYPE") or test_case_data.get("TYPE", "Functional"),
-                "LAST_EXECUTION_RESULT": "Not Executed"
+                "MODIFIED_DATE": now
             }
             
             # Extract tags if present
@@ -495,10 +758,6 @@ class MetadataManager:
                 self.logger.error(error_msg)
                 raise MetadataError(error_msg)
             
-            # Store in database
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
             # Prepare fields and values
             fields = []
             placeholders = []
@@ -510,40 +769,20 @@ class MetadataManager:
                     serialized_value = self._serialize_metadata_value(value, field_type)
                     
                     fields.append(field_name)
-                    placeholders.append("?")
+                    placeholders.append(f"%s")
                     values.append(serialized_value)
             
-            # Insert metadata
+            # Insert metadata using a single query
             insert_sql = f"""
             INSERT INTO test_case_metadata ({', '.join(fields)})
             VALUES ({', '.join(placeholders)})
             """
             
-            cursor.execute(insert_sql, values)
+            self._execute_query(insert_sql, tuple(values))
             
             # Handle tags if present
             if "TAGS" in metadata and metadata["TAGS"]:
-                tags = metadata["TAGS"]
-                if isinstance(tags, str):
-                    # If it's a string, split by comma
-                    tags = [tag.strip() for tag in tags.split(',')]
-                
-                for tag in tags:
-                    # Insert tag if it doesn't exist
-                    cursor.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag,))
-                    
-                    # Get tag id
-                    cursor.execute("SELECT id FROM tags WHERE name = ?", (tag,))
-                    tag_id = cursor.fetchone()[0]
-                    
-                    # Associate tag with test case
-                    cursor.execute(
-                        "INSERT INTO test_case_tags (test_case_id, tag_id) VALUES (?, ?)",
-                        (test_case_id, tag_id)
-                    )
-            
-            conn.commit()
-            conn.close()
+                self._update_test_case_tags(test_case_id, metadata["TAGS"])
             
             self.logger.info(f"Created metadata for test case {test_case_id}")
             return test_case_id
@@ -551,150 +790,62 @@ class MetadataManager:
         except Exception as e:
             self.logger.error(f"Failed to create metadata: {str(e)}")
             raise MetadataError(f"Failed to create metadata: {str(e)}")
-    
-    def update_test_case_metadata(self, test_case_id: str, updates: Dict[str, Any], 
-                             modified_by: str = None) -> Dict[str, Any]:
+
+    def _update_test_case_tags(self, test_case_id: str, tags: List[str]) -> bool:
         """
-        Update metadata for an existing test case.
+        Update tags for a test case.
         
         Args:
             test_case_id (str): The test case ID.
-            updates (Dict[str, Any]): Metadata fields to update.
-            modified_by (str, optional): Person making the updates.
+            tags (List[str]): The list of tags.
             
         Returns:
-            Dict[str, Any]: The updated metadata.
+            bool: True if successful.
             
         Raises:
-            MetadataError: If metadata update fails.
+            DatabaseError: If tag update fails.
         """
         try:
-            # Get current metadata
-            current = self.get_test_case_metadata(test_case_id)
+            # Convert to list if it's a string
+            if isinstance(tags, str):
+                tags = [tag.strip() for tag in tags.split(',')]
+            elif tags is None:
+                tags = []
             
-            if not current:
-                raise MetadataError(f"Test case {test_case_id} not found")
+            # Delete existing tag associations
+            delete_query = "DELETE FROM test_case_tags WHERE test_case_id = %s"
+            self._execute_query(delete_query, (test_case_id,))
             
-            # Apply updates
-            updated = current.copy()
-            updated.update(updates)
-            
-            # Always update MODIFIED_DATE and MODIFIED_BY
-            updated["MODIFIED_DATE"] = datetime.now().isoformat()
-            if modified_by:
-                updated["MODIFIED_BY"] = modified_by
-            
-            # Validate updated metadata
-            is_valid, errors = self._validate_metadata(updated)
-            
-            if not is_valid:
-                error_msg = f"Invalid metadata updates: {'; '.join(errors)}"
-                self.logger.error(error_msg)
-                raise MetadataError(error_msg)
-            
-            # Store updates in database
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # Prepare the UPDATE statement
-            set_clauses = []
-            values = []
-            
-            for field_name, value in updates.items():
-                if field_name in self.schema["metadata_fields"]:
-                    field_type = self.schema["metadata_fields"][field_name]["type"]
-                    serialized_value = self._serialize_metadata_value(value, field_type)
+            # Insert tags and create associations
+            for tag in tags:
+                if not tag:  # Skip empty tags
+                    continue
                     
-                    set_clauses.append(f"{field_name} = ?")
-                    values.append(serialized_value)
-            
-            # Add modified date and modified by
-            set_clauses.append("MODIFIED_DATE = ?")
-            values.append(updated["MODIFIED_DATE"])
-            
-            if modified_by:
-                set_clauses.append("MODIFIED_BY = ?")
-                values.append(modified_by)
-            
-            # Add test case ID for WHERE clause
-            values.append(test_case_id)
-            
-            # Execute update
-            update_sql = f"""
-            UPDATE test_case_metadata
-            SET {', '.join(set_clauses)}
-            WHERE TEST_CASE_ID = ?
-            """
-            
-            cursor.execute(update_sql, values)
-            
-            # Record history
-            for field_name, new_value in updates.items():
-                if field_name in self.schema["metadata_fields"]:
-                    old_value = current.get(field_name)
-                    
-                    # Skip if no change
-                    if old_value == new_value:
-                        continue
-                    
-                    # Serialize for storage
-                    field_type = self.schema["metadata_fields"][field_name]["type"]
-                    old_serialized = self._serialize_metadata_value(old_value, field_type)
-                    new_serialized = self._serialize_metadata_value(new_value, field_type)
-                    
-                    # Convert to string for history
-                    old_str = str(old_serialized) if old_serialized is not None else None
-                    new_str = str(new_serialized) if new_serialized is not None else None
-                    
-                    # Record in history
-                    cursor.execute("""
-                    INSERT INTO metadata_history
-                    (test_case_id, field_name, old_value, new_value, changed_by, changed_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """, (
-                        test_case_id, field_name, old_str, new_str,
-                        modified_by or "System", datetime.now().isoformat()
-                    ))
-            
-            # Handle tags update if present
-            if "TAGS" in updates:
-                # Remove existing tag associations
-                cursor.execute("DELETE FROM test_case_tags WHERE test_case_id = ?", (test_case_id,))
+                # Insert tag if it doesn't exist
+                insert_tag_query = """
+                INSERT INTO tags (name)
+                VALUES (%s)
+                ON CONFLICT (name) DO NOTHING
+                """
+                self._execute_query(insert_tag_query, (tag,))
                 
-                # Add new tags
-                tags = updates["TAGS"]
-                if isinstance(tags, str):
-                    # If it's a string, split by comma
-                    tags = [tag.strip() for tag in tags.split(',')]
-                elif tags is None:
-                    tags = []
+                # Get tag id
+                get_tag_query = "SELECT id FROM tags WHERE name = %s"
+                tag_id = self._execute_query(get_tag_query, (tag,), fetch_one=True)[0]
                 
-                for tag in tags:
-                    # Insert tag if it doesn't exist
-                    cursor.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag,))
-                    
-                    # Get tag id
-                    cursor.execute("SELECT id FROM tags WHERE name = ?", (tag,))
-                    tag_id = cursor.fetchone()[0]
-                    
-                    # Associate tag with test case
-                    cursor.execute(
-                        "INSERT INTO test_case_tags (test_case_id, tag_id) VALUES (?, ?)",
-                        (test_case_id, tag_id)
-                    )
+                # Associate tag with test case
+                insert_assoc_query = """
+                INSERT INTO test_case_tags (test_case_id, tag_id)
+                VALUES (%s, %s)
+                ON CONFLICT (test_case_id, tag_id) DO NOTHING
+                """
+                self._execute_query(insert_assoc_query, (test_case_id, tag_id))
             
-            conn.commit()
-            conn.close()
-            
-            self.logger.info(f"Updated metadata for test case {test_case_id}")
-            
-            # Return the updated metadata
-            return self.get_test_case_metadata(test_case_id)
+            return True
             
         except Exception as e:
-            self.logger.error(f"Failed to update metadata: {str(e)}")
-            raise MetadataError(f"Failed to update metadata: {str(e)}")    
-        
+            self.logger.error(f"Failed to update tags: {str(e)}")
+            raise DatabaseError(f"Failed to update tags: {str(e)}")
 
     def get_test_case_metadata(self, test_case_id: str) -> Dict[str, Any]:
         """
@@ -707,48 +858,162 @@ class MetadataManager:
             Dict[str, Any]: The metadata, or None if not found.
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row  # This enables column access by name
-            cursor = conn.cursor()
+            # Check if the test case exists
+            query = """
+            SELECT * FROM test_cases 
+            WHERE TEST_CASE_NUMBER = %s
+            ORDER BY STEP_NO ASC
+            """
             
-            # Get metadata
-            cursor.execute("SELECT * FROM test_case_metadata WHERE TEST_CASE_ID = ?", (test_case_id,))
-            row = cursor.fetchone()
+            results = self._execute_query(query, (test_case_id,), fetch_all=True, as_dict=True)
             
-            if not row:
+            if not results or len(results) == 0:
                 return None
             
-            # Convert to dict
-            metadata = dict(row)
+            # Construct a metadata structure from the query results
+            # For now, we'll return the first step metadata plus an array of all steps
+            first_step = results[0]
             
-            # Remove the 'id' field (database primary key)
-            if "id" in metadata:
-                del metadata["id"]
+            # Basic metadata from the first step
+            metadata = {
+                "TEST_CASE_NUMBER": first_step.get("test_case_number"),
+                "SUBJECT": first_step.get("subject"),
+                "TEST_CASE": first_step.get("test_case"),
+                "TEST_USER_ID_ROLE": first_step.get("test_user_id_role"),
+                "STATUS": first_step.get("status"),
+                "TYPE": first_step.get("type"),
+                "CREATED_DATE": first_step.get("created_date"),
+                "MODIFIED_DATE": first_step.get("modified_date"),
+                # Add any additional fields that might be useful at the test case level
+            }
             
-            # Deserialize values
-            for field_name, value in metadata.items():
-                if field_name in self.schema["metadata_fields"]:
-                    field_type = self.schema["metadata_fields"][field_name]["type"]
-                    metadata[field_name] = self._deserialize_metadata_value(value, field_type)
+            # Add steps array with all steps' information
+            steps = []
+            for row in results:
+                step = {
+                    "STEP_NO": row.get("step_no"),
+                    "TEST_STEP_DESCRIPTION": row.get("test_step_description"),
+                    "DATA": row.get("data"),
+                    "REFERENCE_VALUES": row.get("reference_values"),
+                    "VALUES": row.get("values"),
+                    "EXPECTED_RESULT": row.get("expected_result"),
+                    "TRANS_CODE": row.get("trans_code")
+                }
+                steps.append(step)
             
-            # Get tags
-            cursor.execute("""
-            SELECT t.name
-            FROM tags t
-            JOIN test_case_tags tct ON t.id = tct.tag_id
-            WHERE tct.test_case_id = ?
-            """, (test_case_id,))
+            metadata["STEPS"] = steps
             
-            tags = [row[0] for row in cursor.fetchall()]
-            metadata["TAGS"] = tags
-            
-            conn.close()
             return metadata
             
         except Exception as e:
             self.logger.error(f"Failed to get metadata: {str(e)}")
             return None
-    
+
+    def update_test_case_metadata(self, test_case_id: str, updates: Dict[str, Any], 
+                            modified_by: str = None) -> Dict[str, Any]:
+        """
+        Update metadata for an existing test case.
+        
+        Args:
+            test_case_id (str): The test case ID (TEST_CASE_NUMBER).
+            updates (Dict[str, Any]): Metadata fields to update.
+            modified_by (str, optional): Person making the updates.
+            
+        Returns:
+            Dict[str, Any]: The updated metadata.
+            
+        Raises:
+            MetadataError: If metadata update fails.
+        """
+        try:
+            # First check if the test case exists
+            existing_metadata = self.get_test_case_metadata(test_case_id)
+            if not existing_metadata:
+                raise MetadataError(f"Test case {test_case_id} not found")
+            
+            # Handle different update scenarios:
+            
+            # 1. If updates contain step-specific changes
+            if "STEPS" in updates:
+                steps_updates = updates.pop("STEPS")  # Remove steps from general updates
+                
+                # Process each step update
+                for step_update in steps_updates:
+                    if "STEP_NO" not in step_update:
+                        self.logger.warning(f"Skipping step update without STEP_NO: {step_update}")
+                        continue
+                    
+                    step_no = step_update.pop("STEP_NO")
+                    
+                    # Skip if no fields to update
+                    if not step_update:
+                        continue
+                    
+                    # Build the SET clause for SQL
+                    set_clauses = []
+                    values = []
+                    
+                    for field, value in step_update.items():
+                        # Convert to database column names (lowercase)
+                        db_field = field.lower()
+                        set_clauses.append(f"{db_field} = %s")
+                        values.append(value)
+                    
+                    # Add MODIFIED_DATE
+                    set_clauses.append("modified_date = %s")
+                    values.append(datetime.now())
+                    
+                    # Add WHERE clause parameters
+                    values.append(test_case_id)
+                    values.append(step_no)
+                    
+                    # Execute the update
+                    update_sql = f"""
+                    UPDATE test_cases
+                    SET {', '.join(set_clauses)}
+                    WHERE test_case_number = %s AND step_no = %s
+                    """
+                    
+                    self._execute_query(update_sql, tuple(values))
+            
+            # 2. Handle test case level updates (will apply to all steps)
+            if updates:
+                # Build the SET clause for SQL
+                set_clauses = []
+                values = []
+                
+                for field, value in updates.items():
+                    # Convert to database column names (lowercase)
+                    db_field = field.lower()
+                    set_clauses.append(f"{db_field} = %s")
+                    values.append(value)
+                
+                # Add MODIFIED_DATE if not already included
+                if "MODIFIED_DATE" not in updates:
+                    set_clauses.append("modified_date = %s")
+                    values.append(datetime.now())
+                
+                # Add WHERE clause parameter
+                values.append(test_case_id)
+                
+                # Execute the update
+                update_sql = f"""
+                UPDATE test_cases
+                SET {', '.join(set_clauses)}
+                WHERE test_case_number = %s
+                """
+                
+                self._execute_query(update_sql, tuple(values))
+            
+            # Get the updated metadata
+            updated_metadata = self.get_test_case_metadata(test_case_id)
+            
+            return updated_metadata
+            
+        except Exception as e:
+            self.logger.error(f"Failed to update metadata: {str(e)}")
+            raise MetadataError(f"Failed to update metadata: {str(e)}")
+
     def delete_test_case_metadata(self, test_case_id: str) -> bool:
         """
         Delete metadata for a test case.
@@ -760,28 +1025,32 @@ class MetadataManager:
             bool: True if successful, False otherwise.
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            # Setup a transaction to ensure all related data is deleted
+            queries = [
+                # Delete tag associations
+                ("DELETE FROM test_case_tags WHERE test_case_id = %s", (test_case_id,)),
+                
+                # Delete history
+                ("DELETE FROM metadata_history WHERE test_case_id = %s", (test_case_id,)),
+                
+                # Delete file content
+                ("DELETE FROM test_case_files WHERE test_case_id = %s", (test_case_id,)),
+                
+                # Delete metadata
+                ("DELETE FROM test_case_metadata WHERE TEST_CASE_ID = %s", (test_case_id,))
+            ]
             
-            # Delete tag associations
-            cursor.execute("DELETE FROM test_case_tags WHERE test_case_id = ?", (test_case_id,))
-            
-            # Delete history
-            cursor.execute("DELETE FROM metadata_history WHERE test_case_id = ?", (test_case_id,))
-            
-            # Delete metadata
-            cursor.execute("DELETE FROM test_case_metadata WHERE TEST_CASE_ID = ?", (test_case_id,))
-            
-            conn.commit()
-            conn.close()
+            # Execute transaction
+            self._execute_transaction(queries)
             
             self.logger.info(f"Deleted metadata for test case {test_case_id}")
             return True
             
         except Exception as e:
             self.logger.error(f"Failed to delete metadata: {str(e)}")
-            return False
-    
+            return False    
+        
+
     def search_test_cases(self, criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Search for test cases based on metadata criteria.
@@ -790,136 +1059,103 @@ class MetadataManager:
             criteria (Dict[str, Any]): Search criteria, where:
                 - Keys are field names
                 - Values can be direct values or dicts with operators: 
-                  {"op": "contains", "value": "partial"}, 
-                  {"op": "in", "value": ["list", "of", "values"]},
-                  {"op": ">", "value": 10}, etc.
+                {"op": "contains", "value": "partial"}, 
+                {"op": "in", "value": ["list", "of", "values"]},
+                {"op": ">", "value": 10}, etc.
             
         Returns:
             List[Dict[str, Any]]: List of matching test case metadata.
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
             # Build the WHERE clause
             where_clauses = []
             params = []
             
             for field, criteria_value in criteria.items():
-                if field == "TAGS":
-                    # Special handling for tags
-                    tag_values = criteria_value
-                    if isinstance(criteria_value, dict) and "value" in criteria_value:
-                        tag_values = criteria_value["value"]
+                # Convert field name to lowercase for DB column names
+                db_field = field.lower()
+                
+                # Handle complex criteria with operators
+                if isinstance(criteria_value, dict) and "op" in criteria_value:
+                    op = criteria_value["op"].lower()
+                    value = criteria_value["value"]
                     
-                    if not isinstance(tag_values, (list, tuple)):
-                        tag_values = [tag_values]
-                    
-                    tag_placeholders = ", ".join(["?"] * len(tag_values))
-                    
-                    # Subquery to get test_case_ids that have all the specified tags
-                    subquery = f"""
-                    TEST_CASE_ID IN (
-                        SELECT tct.test_case_id
-                        FROM test_case_tags tct
-                        JOIN tags t ON tct.tag_id = t.id
-                        WHERE t.name IN ({tag_placeholders})
-                        GROUP BY tct.test_case_id
-                        HAVING COUNT(DISTINCT t.name) = ?
-                    )
-                    """
-                    
-                    where_clauses.append(subquery)
-                    params.extend(tag_values)
-                    params.append(len(tag_values))  # Ensure all tags are matched
-                    
-                elif field in self.schema["metadata_fields"]:
-                    field_type = self.schema["metadata_fields"][field]["type"]
-                    
-                    if isinstance(criteria_value, dict) and "op" in criteria_value:
-                        # Complex criteria with operator
-                        op = criteria_value["op"].lower()
-                        value = criteria_value["value"]
+                    if op == "equals" or op == "=":
+                        where_clauses.append(f"{db_field} = %s")
+                        params.append(value)
                         
-                        if op == "equals" or op == "=":
-                            where_clauses.append(f"{field} = ?")
-                            params.append(self._serialize_metadata_value(value, field_type))
-                            
-                        elif op == "not equals" or op == "!=":
-                            where_clauses.append(f"{field} != ? OR {field} IS NULL")
-                            params.append(self._serialize_metadata_value(value, field_type))
-                            
-                        elif op == "contains" or op == "like":
-                            where_clauses.append(f"{field} LIKE ?")
-                            params.append(f"%{value}%")
-                            
-                        elif op == "in":
-                            placeholders = ", ".join(["?"] * len(value))
-                            where_clauses.append(f"{field} IN ({placeholders})")
-                            params.extend([self._serialize_metadata_value(v, field_type) for v in value])
-                            
-                        elif op == "not in":
-                            placeholders = ", ".join(["?"] * len(value))
-                            where_clauses.append(f"{field} NOT IN ({placeholders}) OR {field} IS NULL")
-                            params.extend([self._serialize_metadata_value(v, field_type) for v in value])
-                            
-                        elif op in [">", "<", ">=", "<="]:
-                            where_clauses.append(f"{field} {op} ?")
-                            params.append(self._serialize_metadata_value(value, field_type))
-                            
-                    else:
-                        # Simple equality match
-                        where_clauses.append(f"{field} = ?")
-                        params.append(self._serialize_metadata_value(criteria_value, field_type))
+                    elif op == "not equals" or op == "!=":
+                        where_clauses.append(f"{db_field} != %s OR {db_field} IS NULL")
+                        params.append(value)
+                        
+                    elif op == "contains" or op == "like":
+                        # PostgreSQL ILIKE for case-insensitive search
+                        where_clauses.append(f"{db_field} ILIKE %s")
+                        params.append(f"%{value}%")
+                        
+                    elif op == "in":
+                        placeholders = []
+                        for v in value:
+                            placeholders.append("%s")
+                            params.append(v)
+                        
+                        where_clauses.append(f"{db_field} IN ({', '.join(placeholders)})")
+                        
+                    elif op == "not in":
+                        placeholders = []
+                        for v in value:
+                            placeholders.append("%s")
+                            params.append(v)
+                        
+                        where_clauses.append(f"{db_field} NOT IN ({', '.join(placeholders)}) OR {db_field} IS NULL")
+                        
+                    elif op in [">", "<", ">=", "<="]:
+                        where_clauses.append(f"{db_field} {op} %s")
+                        params.append(value)
+                        
+                    elif op == "between":
+                        if isinstance(value, (list, tuple)) and len(value) == 2:
+                            where_clauses.append(f"{db_field} BETWEEN %s AND %s")
+                            params.append(value[0])
+                            params.append(value[1])
+                else:
+                    # Simple equality match
+                    where_clauses.append(f"{db_field} = %s")
+                    params.append(criteria_value)
             
-            # Build the final query
-            query = "SELECT * FROM test_case_metadata"
+            # Build the query to get distinct test case numbers
+            query = """
+            SELECT DISTINCT test_case_number 
+            FROM test_cases
+            """
             
             if where_clauses:
                 query += " WHERE " + " AND ".join(where_clauses)
             
-            # Execute the query
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
+            # Add ordering
+            query += " ORDER BY test_case_number ASC"
             
-            # Process results
-            results = []
+            # Execute the query to get test case IDs
+            results = self._execute_query(query, tuple(params), fetch_all=True)
+            test_case_ids = [row[0] for row in results] if results else []
             
-            for row in rows:
-                # Convert row to dict
-                metadata = dict(row)
-                
-                # Remove the 'id' field
-                if "id" in metadata:
-                    del metadata["id"]
-                
-                # Deserialize values
-                for field_name, value in metadata.items():
-                    if field_name in self.schema["metadata_fields"]:
-                        field_type = self.schema["metadata_fields"][field_name]["type"]
-                        metadata[field_name] = self._deserialize_metadata_value(value, field_type)
-                
-                # Get tags
-                cursor.execute("""
-                SELECT t.name
-                FROM tags t
-                JOIN test_case_tags tct ON t.id = tct.tag_id
-                WHERE tct.test_case_id = ?
-                """, (metadata["TEST_CASE_ID"],))
-                
-                tags = [row[0] for row in cursor.fetchall()]
-                metadata["TAGS"] = tags
-                
-                results.append(metadata)
+            # If no results, return empty list
+            if not test_case_ids:
+                return []
             
-            conn.close()
-            return results
+            # Get full metadata for each matching test case
+            matching_test_cases = []
+            for test_case_id in test_case_ids:
+                metadata = self.get_test_case_metadata(test_case_id)
+                if metadata:
+                    matching_test_cases.append(metadata)
+            
+            return matching_test_cases
             
         except Exception as e:
             self.logger.error(f"Search failed: {str(e)}")
-            return []
-    
+            raise DatabaseError(f"Search operation failed: {str(e)}")
+
     def get_metadata_history(self, test_case_id: str) -> List[Dict[str, Any]]:
         """
         Get the history of metadata changes for a test case.
@@ -931,25 +1167,26 @@ class MetadataManager:
             List[Dict[str, Any]]: List of history entries, ordered by time.
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-            SELECT * FROM metadata_history
-            WHERE test_case_id = ?
+            query = """
+            SELECT id, test_case_id, field_name, old_value, new_value, changed_by, changed_at
+            FROM metadata_history
+            WHERE test_case_id = %s
             ORDER BY changed_at DESC
-            """, (test_case_id,))
+            """
             
-            history = [dict(row) for row in cursor.fetchall()]
+            history = self._execute_query(query, (test_case_id,), fetch_all=True, as_dict=True)
             
-            conn.close()
+            # Convert timestamps to ISO format for consistency
+            for entry in history:
+                if entry["changed_at"] and isinstance(entry["changed_at"], datetime):
+                    entry["changed_at"] = entry["changed_at"].isoformat()
+            
             return history
             
         except Exception as e:
             self.logger.error(f"Failed to get metadata history: {str(e)}")
             return []
-    
+        
     def get_test_cases_by_owner(self, owner: str) -> List[Dict[str, Any]]:
         """
         Get all test cases owned by a specific person.
@@ -961,7 +1198,7 @@ class MetadataManager:
             List[Dict[str, Any]]: List of test case metadata.
         """
         return self.search_test_cases({"OWNER": owner})
-    
+
     def get_test_cases_by_status(self, status: str) -> List[Dict[str, Any]]:
         """
         Get all test cases with a specific status.
@@ -973,7 +1210,7 @@ class MetadataManager:
             List[Dict[str, Any]]: List of test case metadata.
         """
         return self.search_test_cases({"STATUS": status})
-    
+
     def get_test_cases_by_tags(self, tags: List[str]) -> List[Dict[str, Any]]:
         """
         Get all test cases that have all the specified tags.
@@ -984,11 +1221,205 @@ class MetadataManager:
         Returns:
             List[Dict[str, Any]]: List of test case metadata.
         """
-        return self.search_test_cases({"TAGS": tags})   
+        return self.search_test_cases({"TAGS": tags})
+
+    def get_test_cases_by_module(self, module: str) -> List[Dict[str, Any]]:
+        """
+        Get all test cases for a specific module.
+        
+        Args:
+            module (str): The module name.
+            
+        Returns:
+            List[Dict[str, Any]]: List of test case metadata.
+        """
+        return self.search_test_cases({"MODULE": module})
+
+    def search_test_cases_by_content(self, search_text: str) -> List[Dict[str, Any]]:
+        """
+        Search for test cases containing specific text in the file content.
+        
+        Args:
+            search_text (str): Text to search for in the test case content.
+            
+        Returns:
+            List[Dict[str, Any]]: List of matching test case metadata.
+            
+        Note: This is a simplified implementation. PostgreSQL offers more advanced
+            text search capabilities like full-text search that could be used here.
+        """
+        try:
+            # First, get all test case IDs that have files with the search text in the filename
+            file_query = """
+            SELECT DISTINCT test_case_id 
+            FROM test_case_files
+            WHERE file_name ILIKE %s
+            """
+            
+            file_results = self._execute_query(file_query, (f"%{search_text}%",), fetch_all=True)
+            matching_ids = [row[0] for row in file_results] if file_results else []
+            
+            # If no matches in filenames, return empty list
+            if not matching_ids:
+                return []
+            
+            # Now get the full metadata for these test cases
+            placeholders = []
+            params = []
+            for test_case_id in matching_ids:
+                placeholders.append("%s")
+                params.append(test_case_id)
+            
+            metadata_query = f"""
+            SELECT * FROM test_case_metadata
+            WHERE TEST_CASE_ID IN ({', '.join(placeholders)})
+            ORDER BY MODIFIED_DATE DESC
+            """
+            
+            results = self._execute_query(metadata_query, tuple(params), fetch_all=True, as_dict=True)
+            
+            # Process results (similar to search_test_cases)
+            processed_results = []
+            
+            for row in results:
+                # Remove the 'id' field
+                if "id" in row:
+                    del row["id"]
+                
+                # Deserialize values
+                for field_name, value in dict(row).items():
+                    if field_name in self.schema["metadata_fields"]:
+                        field_type = self.schema["metadata_fields"][field_name]["type"]
+                        row[field_name] = self._deserialize_metadata_value(value, field_type)
+                
+                # Get tags
+                tags_query = """
+                SELECT t.name
+                FROM tags t
+                JOIN test_case_tags tct ON t.id = tct.tag_id
+                WHERE tct.test_case_id = %s
+                """
+                
+                tags_result = self._execute_query(tags_query, (row["TEST_CASE_ID"],), fetch_all=True)
+                row["TAGS"] = [tag_row[0] for tag_row in tags_result] if tags_result else []
+                
+                processed_results.append(row)
+            
+            return processed_results
+            
+        except Exception as e:
+            self.logger.error(f"Content search failed: {str(e)}")
+            return []
+
+    def get_all_tags(self) -> List[str]:
+        """
+        Get all unique tags used across all test cases.
+        
+        Returns:
+            List[str]: List of unique tags.
+        """
+        try:
+            query = "SELECT name FROM tags ORDER BY name"
+            result = self._execute_query(query, fetch_all=True)
+            
+            return [row[0] for row in result] if result else []
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get all tags: {str(e)}")
+            return []
+
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about test cases.
+        
+        Returns:
+            Dict[str, Any]: Statistics including counts by status, type, etc.
+        """
+        try:
+            stats = {
+                "total_count": 0,
+                "by_status": {},
+                "by_type": {},
+                "by_automation_status": {},
+                "by_module": {},
+                "recently_modified": []
+            }
+            
+            # Get total count
+            count_query = "SELECT COUNT(*) FROM test_case_metadata"
+            total_count = self._execute_query(count_query, fetch_one=True)[0]
+            stats["total_count"] = total_count
+            
+            # Get counts by status
+            status_query = """
+            SELECT STATUS, COUNT(*) as count
+            FROM test_case_metadata
+            GROUP BY STATUS
+            ORDER BY count DESC
+            """
+            status_results = self._execute_query(status_query, fetch_all=True)
+            for row in status_results:
+                stats["by_status"][row[0]] = row[1]
+            
+            # Get counts by type
+            type_query = """
+            SELECT TEST_TYPE, COUNT(*) as count
+            FROM test_case_metadata
+            GROUP BY TEST_TYPE
+            ORDER BY count DESC
+            """
+            type_results = self._execute_query(type_query, fetch_all=True)
+            for row in type_results:
+                stats["by_type"][row[0] or "Unspecified"] = row[1]
+            
+            # Get counts by automation status
+            auto_query = """
+            SELECT AUTOMATION_STATUS, COUNT(*) as count
+            FROM test_case_metadata
+            GROUP BY AUTOMATION_STATUS
+            ORDER BY count DESC
+            """
+            auto_results = self._execute_query(auto_query, fetch_all=True)
+            for row in auto_results:
+                stats["by_automation_status"][row[0]] = row[1]
+            
+            # Get counts by module
+            module_query = """
+            SELECT MODULE, COUNT(*) as count
+            FROM test_case_metadata
+            GROUP BY MODULE
+            ORDER BY count DESC
+            LIMIT 10
+            """
+            module_results = self._execute_query(module_query, fetch_all=True)
+            for row in module_results:
+                stats["by_module"][row[0] or "Unspecified"] = row[1]
+            
+            # Get recently modified test cases
+            recent_query = """
+            SELECT TEST_CASE_ID, TEST_TYPE, MODULE, STATUS, MODIFIED_DATE
+            FROM test_case_metadata
+            ORDER BY MODIFIED_DATE DESC
+            LIMIT 5
+            """
+            recent_results = self._execute_query(recent_query, fetch_all=True, as_dict=True)
+            
+            # Format dates
+            for row in recent_results:
+                if "MODIFIED_DATE" in row and isinstance(row["MODIFIED_DATE"], datetime):
+                    row["MODIFIED_DATE"] = row["MODIFIED_DATE"].isoformat()
+            
+            stats["recently_modified"] = recent_results
+            
+            return stats
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get statistics: {str(e)}")
+            return {"total_count": 0}   
 
 
     def update_test_case_status(self, test_case_id: str, new_status: str, 
-                           modified_by: str = None) -> Dict[str, Any]:
+                       modified_by: str = None) -> Dict[str, Any]:
         """
         Update the status of a test case.
         
@@ -1016,9 +1447,9 @@ class MetadataManager:
             {"STATUS": new_status},
             modified_by
         )
-    
+
     def update_test_case_owner(self, test_case_id: str, new_owner: str, 
-                          modified_by: str = None) -> Dict[str, Any]:
+                        modified_by: str = None) -> Dict[str, Any]:
         """
         Update the owner of a test case.
         
@@ -1038,7 +1469,7 @@ class MetadataManager:
             {"OWNER": new_owner},
             modified_by
         )
-    
+
     def update_automation_status(self, test_case_id: str, new_status: str, 
                             modified_by: str = None) -> Dict[str, Any]:
         """
@@ -1070,9 +1501,9 @@ class MetadataManager:
             {"AUTOMATION_STATUS": new_status},
             modified_by
         )
-    
+
     def update_test_execution_result(self, test_case_id: str, result: str, 
-                               executed_by: str = None) -> Dict[str, Any]:
+                            executed_by: str = None) -> Dict[str, Any]:
         """
         Update the test execution result for a test case.
         
@@ -1099,11 +1530,11 @@ class MetadataManager:
             test_case_id,
             {
                 "LAST_EXECUTION_RESULT": result,
-                "LAST_EXECUTION_DATE": datetime.now().isoformat()
+                "LAST_EXECUTION_DATE": datetime.now()
             },
             executed_by
         )
-    
+
     def add_tags_to_test_case(self, test_case_id: str, tags: List[str], 
                         modified_by: str = None) -> Dict[str, Any]:
         """
@@ -1137,9 +1568,9 @@ class MetadataManager:
             {"TAGS": updated_tags},
             modified_by
         )
-    
+
     def remove_tags_from_test_case(self, test_case_id: str, tags: List[str], 
-                             modified_by: str = None) -> Dict[str, Any]:
+                            modified_by: str = None) -> Dict[str, Any]:
         """
         Remove tags from a test case.
         
@@ -1172,28 +1603,226 @@ class MetadataManager:
             {"TAGS": updated_tags},
             modified_by
         )
-    
-    def get_all_tags(self) -> List[str]:
+
+    def store_test_case_file_content(self, test_case_id: str, file_name: str, 
+                            file_content: bytes, file_type: str = None,
+                            uploaded_by: str = None) -> bool:
         """
-        Get all unique tags used across all test cases.
+        Store the content of a test case file in the database.
         
+        Args:
+            test_case_id (str): The test case ID.
+            file_name (str): The name of the file.
+            file_content (bytes): The content of the file as bytes.
+            file_type (str, optional): The file type, if not provided, extracted from file_name.
+            uploaded_by (str, optional): Person uploading the file.
+            
         Returns:
-            List[str]: List of unique tags.
+            bool: True if successful, False otherwise.
+            
+        Raises:
+            MetadataError: If the upload fails.
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            # Check if test case exists
+            metadata = self.get_test_case_metadata(test_case_id)
+            if not metadata:
+                raise MetadataError(f"Test case {test_case_id} not found")
             
-            cursor.execute("SELECT name FROM tags ORDER BY name")
-            tags = [row[0] for row in cursor.fetchall()]
+            # Determine file type if not provided
+            if not file_type:
+                file_type = os.path.splitext(file_name)[1].lstrip('.')
             
-            conn.close()
-            return tags
+            # Store file in the database
+            query = """
+            INSERT INTO test_case_files (test_case_id, file_name, file_type, content, uploaded_at)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (test_case_id) DO UPDATE
+            SET file_name = EXCLUDED.file_name,
+                file_type = EXCLUDED.file_type,
+                content = EXCLUDED.content,
+                uploaded_at = EXCLUDED.uploaded_at
+            """
+            
+            params = (test_case_id, file_name, file_type, file_content, datetime.now())
+            self._execute_query(query, params)
+            
+            # Update metadata to indicate file storage
+            self.update_test_case_metadata(
+                test_case_id,
+                {
+                    "FILE_NAME": file_name,
+                    "FILE_TYPE": file_type,
+                    "MODIFIED_DATE": datetime.now()
+                },
+                uploaded_by
+            )
+            
+            self.logger.info(f"Stored file '{file_name}' for test case {test_case_id}")
+            return True
             
         except Exception as e:
-            self.logger.error(f"Failed to get all tags: {str(e)}")
-            return []
-    
+            self.logger.error(f"Failed to store test case file: {str(e)}")
+            raise MetadataError(f"Failed to store test case file: {str(e)}")
+
+    def retrieve_test_case_file_content(self, test_case_id: str) -> Tuple[str, str, bytes]:
+        """
+        Retrieve the content of a test case file from the database.
+        
+        Args:
+            test_case_id (str): The test case ID.
+            
+        Returns:
+            Tuple[str, str, bytes]: (file_name, file_type, file_content)
+            
+        Raises:
+            MetadataError: If the retrieval fails.
+        """
+        try:
+            query = """
+            SELECT file_name, file_type, content
+            FROM test_case_files
+            WHERE test_case_id = %s
+            """
+            
+            result = self._execute_query(query, (test_case_id,), fetch_one=True)
+            
+            if not result:
+                self.logger.warning(f"No file found for test case {test_case_id}")
+                return None, None, None
+            
+            file_name = result[0]
+            file_type = result[1]
+            file_content = result[2]
+            
+            return file_name, file_type, file_content
+            
+        except Exception as e:
+            self.logger.error(f"Failed to retrieve test case file: {str(e)}")
+            raise MetadataError(f"Failed to retrieve test case file: {str(e)}")
+
+    def get_test_case_file_as_dataframe(self, test_case_id: str) -> pd.DataFrame:
+        """
+        Retrieve a test case file as a pandas DataFrame directly from database.
+        
+        Args:
+            test_case_id (str): The test case ID.
+            
+        Returns:
+            pd.DataFrame: The test case data as a DataFrame.
+            
+        Raises:
+            MetadataError: If the retrieval or conversion fails.
+        """
+        try:
+            # Get file content directly from the database
+            file_name, file_type, file_content = self.retrieve_test_case_file_content(test_case_id)
+            
+            if not file_content:
+                raise MetadataError(f"No file content found for test case {test_case_id}")
+            
+            # Create a BytesIO object directly from the binary content
+            file_obj = BytesIO(file_content)
+            
+            # Read as DataFrame based on file type without creating temporary files
+            file_type = file_type.lower() if file_type else ''
+            
+            if file_type in ['xlsx', 'xls']:
+                # Read Excel file directly from BytesIO
+                df = pd.read_excel(file_obj, engine='openpyxl')
+            elif file_type == 'csv':
+                # Read CSV file directly from BytesIO
+                df = pd.read_csv(file_obj)
+            else:
+                raise MetadataError(f"Unsupported file type: {file_type}")
+            
+            return df
+            
+        except Exception as e:
+            logger.error(f"Failed to convert test case file to DataFrame: {str(e)}")
+            raise MetadataError(f"Failed to convert test case file to DataFrame: {str(e)}")
+
+    def save_dataframe_as_test_case_file(self, test_case_id: str, df: pd.DataFrame, 
+                                    file_name: str = None, file_type: str = 'xlsx',
+                                    uploaded_by: str = None) -> bool:
+        """
+        Save a pandas DataFrame as a test case file directly in the database.
+        
+        Args:
+            test_case_id (str): The test case ID.
+            df (pd.DataFrame): The DataFrame to save.
+            file_name (str, optional): The file name. If None, uses test_case_id.
+            file_type (str, optional): The file type ('xlsx' or 'csv'). Default is 'xlsx'.
+            uploaded_by (str, optional): Person uploading the file.
+            
+        Returns:
+            bool: True if successful, False otherwise.
+            
+        Raises:
+            MetadataError: If the save fails.
+        """
+        try:
+            # Create file name if not provided
+            if not file_name:
+                file_name = f"{test_case_id}.{file_type}"
+            
+            # Create a BytesIO object to hold the file content
+            file_obj = BytesIO()
+            
+            # Save DataFrame to the BytesIO object based on file type
+            file_type = file_type.lower()
+            
+            if file_type in ['xlsx', 'xls']:
+                # Save as Excel directly to BytesIO
+                df.to_excel(file_obj, index=False, engine='openpyxl')
+            elif file_type == 'csv':
+                # Save as CSV directly to BytesIO
+                df.to_csv(file_obj, index=False)
+            else:
+                raise MetadataError(f"Unsupported file type: {file_type}")
+            
+            # Get file content as bytes
+            file_obj.seek(0)
+            file_content = file_obj.getvalue()
+            
+            # Store file directly in the database
+            result = self.store_test_case_file_content(
+                test_case_id, file_name, file_content, file_type, uploaded_by
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to save DataFrame as test case file: {str(e)}")
+            raise MetadataError(f"Failed to save DataFrame as test case file: {str(e)}")
+
+    def file_exists_for_test_case(self, test_case_id: str) -> bool:
+        """
+        Check if a file exists for a test case.
+        
+        Args:
+            test_case_id (str): The test case ID.
+            
+        Returns:
+            bool: True if a file exists, False otherwise.
+        """
+        try:
+            query = """
+            SELECT COUNT(*)
+            FROM test_case_files
+            WHERE test_case_id = %s
+            """
+            
+            result = self._execute_query(query, (test_case_id,), fetch_one=True)
+            
+            return result[0] > 0
+            
+        except Exception as e:
+            self.logger.error(f"Failed to check if file exists: {str(e)}")
+            return False     
+        
+
+
     def export_metadata_to_json(self, output_path: str, test_case_ids: List[str] = None) -> int:
         """
         Export metadata to a JSON file.
@@ -1216,22 +1845,18 @@ class MetadataManager:
                 metadata_list = [m for m in metadata_list if m]  # Filter out None values
             else:
                 # Get all test cases
-                conn = sqlite3.connect(self.db_path)
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                
-                cursor.execute("SELECT TEST_CASE_ID FROM test_case_metadata")
-                test_case_ids = [row[0] for row in cursor.fetchall()]
-                conn.close()
+                query = "SELECT TEST_CASE_ID FROM test_case_metadata ORDER BY TEST_CASE_ID"
+                result = self._execute_query(query, fetch_all=True)
+                test_case_ids = [row[0] for row in result] if result else []
                 
                 metadata_list = [self.get_test_case_metadata(tc_id) for tc_id in test_case_ids]
             
             # Create directory if it doesn't exist
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
             
             # Write to file
             with open(output_path, 'w') as f:
-                json.dump(metadata_list, f, indent=2)
+                json.dump(metadata_list, f, indent=2, default=self._json_serialize)
             
             self.logger.info(f"Exported {len(metadata_list)} test case metadata records to {output_path}")
             return len(metadata_list)
@@ -1239,7 +1864,21 @@ class MetadataManager:
         except Exception as e:
             self.logger.error(f"Failed to export metadata: {str(e)}")
             raise MetadataError(f"Failed to export metadata: {str(e)}")
-    
+
+    def _json_serialize(self, obj):
+        """
+        Custom JSON serializer for handling datetime objects.
+        
+        Args:
+            obj: Object to serialize.
+            
+        Returns:
+            str: Serialized representation.
+        """
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        raise TypeError(f"Type {type(obj)} not serializable")
+
     def import_metadata_from_json(self, input_path: str, overwrite: bool = False) -> int:
         """
         Import metadata from a JSON file.
@@ -1294,122 +1933,741 @@ class MetadataManager:
             self.logger.error(f"Failed to import metadata: {str(e)}")
             raise MetadataError(f"Failed to import metadata: {str(e)}")
 
-
-# If running as a script
-if __name__ == "__main__":
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Manage test case metadata")
-    parser.add_argument("--action", choices=["create", "update", "get", "delete", "search", 
-                                        "export", "import"], required=True,
-                      help="Action to perform")
-    parser.add_argument("--test_case_id", help="Test case ID")
-    parser.add_argument("--test_case_file", help="Path to test case file for metadata extraction")
-    parser.add_argument("--owner", help="Owner for test case")
-    parser.add_argument("--status", help="Status for test case")
-    parser.add_argument("--field", help="Field name for update action")
-    parser.add_argument("--value", help="Field value for update action")
-    parser.add_argument("--json_file", help="Path to JSON file for export/import")
-    parser.add_argument("--schema", help="Path to metadata schema file")
-    
-    args = parser.parse_args()
-    
-    # Configure logging
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
-    # Create metadata manager
-    metadata_manager = MetadataManager(schema_path=args.schema)
-    
-    # Execute requested action
-    if args.action == "create" and args.test_case_file:
-        # Extract metadata from test case file
-        try:
-            # Load the test case file
-            test_case_df = pd.read_excel(args.test_case_file)
+    def export_test_case_to_excel(self, test_case_id: str, output_path: str = None) -> Union[bool, BytesIO]:
+        """
+        Export a test case to an Excel file or return as in-memory buffer.
+        
+        Args:
+            test_case_id (str): The test case ID.
+            output_path (str, optional): Path to save the Excel file. If None, returns a BytesIO object.
             
-            # Extract basic info
+        Returns:
+            Union[bool, BytesIO]: True if saved to file path, BytesIO object if no path provided.
+            
+        Raises:
+            MetadataError: If the export fails.
+        """
+        try:
+            # Get test case as DataFrame
+            df = self.get_test_case_file_as_dataframe(test_case_id)
+            
+            if df is None or df.empty:
+                raise MetadataError(f"No file content found for test case {test_case_id}")
+            
+            # Create in-memory Excel file
+            output_buffer = BytesIO()
+            df.to_excel(output_buffer, index=False, engine='openpyxl')
+            output_buffer.seek(0)
+            
+            # If output_path provided, save to file
+            if output_path:
+                # Create directory if it doesn't exist
+                os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+                
+                # Write buffer to file
+                with open(output_path, 'wb') as f:
+                    f.write(output_buffer.getvalue())
+                
+                self.logger.info(f"Exported test case {test_case_id} to {output_path}")
+                return True
+            else:
+                # Return the in-memory buffer for direct use
+                return output_buffer
+                
+        except Exception as e:
+            self.logger.error(f"Failed to export test case to Excel: {str(e)}")
+            raise MetadataError(f"Failed to export test case to Excel: {str(e)}")
+
+    def import_test_case_from_excel(self, file_path_or_content: Union[str, bytes], test_case_id: str = None,
+                            uploaded_by: str = None) -> str:
+        """
+        Import a test case from an Excel file or file content.
+        
+        Args:
+            file_path_or_content (Union[str, bytes]): Path to the Excel file or file content as bytes.
+            test_case_id (str, optional): The test case ID. If None, extracted from file.
+            uploaded_by (str, optional): Person uploading the file.
+            
+        Returns:
+            str: The test case ID.
+            
+        Raises:
+            MetadataError: If the import fails.
+        """
+        try:
+            # Determine if input is a file path or file content
+            file_name = None
+            file_type = None
+            file_content = None
+            df = None
+            
+            if isinstance(file_path_or_content, str) and os.path.exists(file_path_or_content):
+                # It's a file path
+                file_path = file_path_or_content
+                file_name = os.path.basename(file_path)
+                file_type = os.path.splitext(file_name)[1].lstrip('.')
+                
+                # Read file content as bytes
+                with open(file_path, 'rb') as f:
+                    file_content = f.read()
+                
+                # Read Excel directly to DataFrame
+                file_io = BytesIO(file_content)
+                df = pd.read_excel(file_io, engine='openpyxl')
+            
+            elif isinstance(file_path_or_content, bytes):
+                # It's file content as bytes - assume Excel format
+                file_content = file_path_or_content
+                file_type = "xlsx"  # Default to xlsx
+                
+                # If test_case_id is provided, use it for the file name
+                file_name = f"{test_case_id}.{file_type}" if test_case_id else f"imported_test_case.{file_type}"
+                
+                # Read Excel directly to DataFrame
+                file_io = BytesIO(file_content)
+                df = pd.read_excel(file_io, engine='openpyxl')
+            
+            else:
+                raise MetadataError(f"Invalid input: must be a file path or file content as bytes")
+            
+            if df is None or df.empty:
+                raise MetadataError(f"Empty Excel file: {file_name}")
+            
+            # Extract TEST_CASE_ID from file if not provided
+            if not test_case_id:
+                if "TEST CASE NUMBER" in df.columns and not df["TEST CASE NUMBER"].isna().all():
+                    test_case_id = df["TEST CASE NUMBER"].iloc[0]
+                else:
+                    # Generate a new ID
+                    test_case_id = f"TC-{uuid.uuid4().hex[:8].upper()}"
+            
+            # Extract test case metadata
             test_case_data = {}
             
-            if len(test_case_df) > 0:
-                first_row = test_case_df.iloc[0]
+            # Map fields from first row if available
+            if len(df) > 0:
+                first_row = df.iloc[0]
                 
-                # Extract fields if they exist
-                for source_field, target_field in [
-                    ("TEST CASE NUMBER", "TEST_CASE_ID"),
-                    ("TEST CASE", "TEST_CASE"),
-                    ("SUBJECT", "MODULE"),
-                    ("TEST USER ID/ROLE", "OWNER"),
-                    ("TYPE", "TEST_TYPE")
-                ]:
-                    if source_field in test_case_df.columns:
-                        test_case_data[target_field] = first_row.get(source_field)
+                # Map common fields
+                field_mappings = {
+                    "TEST CASE": "TEST_CASE",
+                    "SUBJECT": "MODULE",
+                    "TEST USER ID/ROLE": "OWNER",
+                    "TYPE": "TEST_TYPE",
+                    "TEST CASE NUMBER": "TEST_CASE_ID"
+                }
+                
+                for source, target in field_mappings.items():
+                    if source in df.columns and not pd.isna(first_row.get(source)):
+                        test_case_data[target] = first_row.get(source)
             
-            # Create metadata
-            test_case_id = metadata_manager.create_test_case_metadata(test_case_data, created_by=args.owner)
-            print(f"Created metadata for test case {test_case_id}")
+            # Override with provided test_case_id
+            test_case_data["TEST_CASE_ID"] = test_case_id
+            
+            # Create or update test case metadata
+            if self.get_test_case_metadata(test_case_id):
+                # Update existing
+                self.update_test_case_metadata(test_case_id, test_case_data, uploaded_by)
+            else:
+                # Create new
+                self.create_test_case_metadata(test_case_data, uploaded_by)
+            
+            # Store file content directly - no need to re-read from disk
+            self.store_test_case_file_content(test_case_id, file_name, file_content, file_type, uploaded_by)
+            
+            self.logger.info(f"Imported test case with ID {test_case_id}")
+            return test_case_id
             
         except Exception as e:
-            print(f"Error: {str(e)}")
-    
-    elif args.action == "update" and args.test_case_id and args.field and args.value:
-        try:
-            updates = {args.field: args.value}
-            metadata = metadata_manager.update_test_case_metadata(args.test_case_id, updates, args.owner)
-            print(f"Updated metadata for test case {args.test_case_id}")
-            print(f"Field {args.field} set to: {metadata.get(args.field)}")
-        except Exception as e:
-            print(f"Error: {str(e)}")
-    
-    elif args.action == "get" and args.test_case_id:
-        metadata = metadata_manager.get_test_case_metadata(args.test_case_id)
-        if metadata:
-            print(f"\nMetadata for test case {args.test_case_id}:")
-            for key, value in metadata.items():
-                print(f"  {key}: {value}")
-        else:
-            print(f"No metadata found for test case {args.test_case_id}")
-    
-    elif args.action == "delete" and args.test_case_id:
-        success = metadata_manager.delete_test_case_metadata(args.test_case_id)
-        if success:
-            print(f"Deleted metadata for test case {args.test_case_id}")
-        else:
-            print(f"Failed to delete metadata for test case {args.test_case_id}")
-    
-    elif args.action == "search":
-        criteria = {}
+            self.logger.error(f"Failed to import test case from Excel: {str(e)}")
+            raise MetadataError(f"Failed to import test case from Excel: {str(e)}")
+
+    def bulk_export_test_cases(self, test_case_ids: List[str], output_dir: str,
+                        include_metadata: bool = True) -> Dict[str, str]:
+        """
+        Export multiple test cases to files.
         
-        if args.owner:
-            criteria["OWNER"] = args.owner
-        
-        if args.status:
-            criteria["STATUS"] = args.status
-        
-        if not criteria:
-            print("Error: No search criteria provided")
-        else:
-            results = metadata_manager.search_test_cases(criteria)
-            print(f"\nFound {len(results)} matching test cases:")
+        Args:
+            test_case_ids (List[str]): List of test case IDs to export.
+            output_dir (str): Directory to save the files.
+            include_metadata (bool, optional): Whether to include metadata in export.
             
-            for idx, metadata in enumerate(results, 1):
-                print(f"\n{idx}. {metadata.get('TEST_CASE_ID')}: {metadata.get('TEST_CASE', 'Unnamed')}")
-                print(f"   Owner: {metadata.get('OWNER', 'Unassigned')}")
-                print(f"   Status: {metadata.get('STATUS', 'Unknown')}")
-                print(f"   Type: {metadata.get('TEST_TYPE', 'Unknown')}")
-    
-    elif args.action == "export" and args.json_file:
+        Returns:
+            Dict[str, str]: Map of test case IDs to output file paths.
+            
+        Raises:
+            MetadataError: If the export fails.
+        """
         try:
-            count = metadata_manager.export_metadata_to_json(args.json_file)
-            print(f"Exported {count} test case metadata records to {args.json_file}")
+            # Create output directory if it doesn't exist
+            os.makedirs(output_dir, exist_ok=True)
+            
+            result = {}
+            
+            # Export metadata if requested
+            if include_metadata:
+                metadata_path = os.path.join(output_dir, "metadata.json")
+                self.export_metadata_to_json(metadata_path, test_case_ids)
+            
+            # Export each test case file
+            for test_case_id in test_case_ids:
+                try:
+                    # Get file name and type
+                    metadata = self.get_test_case_metadata(test_case_id)
+                    if not metadata:
+                        self.logger.warning(f"Test case not found: {test_case_id}")
+                        continue
+                    
+                    # Check if file exists
+                    if not self.file_exists_for_test_case(test_case_id):
+                        self.logger.warning(f"No file found for test case: {test_case_id}")
+                        continue
+                    
+                    # Get file name from metadata or use test case ID
+                    file_name = metadata.get("FILE_NAME", f"{test_case_id}.xlsx")
+                    file_type = metadata.get("FILE_TYPE", "xlsx")
+                    
+                    # Ensure file name has extension
+                    if not os.path.splitext(file_name)[1]:
+                        file_name = f"{file_name}.{file_type}"
+                    
+                    # Create output path
+                    output_path = os.path.join(output_dir, file_name)
+                    
+                    # Export to file
+                    self.export_test_case_to_excel(test_case_id, output_path)
+                    
+                    result[test_case_id] = output_path
+                    
+                except Exception as case_error:
+                    self.logger.error(f"Failed to export test case {test_case_id}: {str(case_error)}")
+                    # Continue with next test case
+            
+            self.logger.info(f"Exported {len(result)} test cases to {output_dir}")
+            return result
+            
         except Exception as e:
-            print(f"Error: {str(e)}")
-    
-    elif args.action == "import" and args.json_file:
+            self.logger.error(f"Failed to bulk export test cases: {str(e)}")
+            raise MetadataError(f"Failed to bulk export test cases: {str(e)}")
+
+    def bulk_import_test_cases(self, file_paths: List[str], uploaded_by: str = None) -> List[str]:
+        """
+        Import multiple test cases from files.
+        
+        Args:
+            file_paths (List[str]): List of file paths to import.
+            uploaded_by (str, optional): Person uploading the files.
+            
+        Returns:
+            List[str]: List of imported test case IDs.
+            
+        Raises:
+            MetadataError: If the import fails.
+        """
         try:
-            count = metadata_manager.import_metadata_from_json(args.json_file)
-            print(f"Imported {count} test case metadata records from {args.json_file}")
+            imported_ids = []
+            
+            for file_path in file_paths:
+                try:
+                    file_ext = os.path.splitext(file_path)[1].lower()
+                    
+                    if file_ext in ['.xlsx', '.xls']:
+                        # Import Excel file
+                        test_case_id = self.import_test_case_from_excel(file_path, None, uploaded_by)
+                        imported_ids.append(test_case_id)
+                    else:
+                        self.logger.warning(f"Unsupported file type: {file_ext}")
+                        # Skip this file
+                    
+                except Exception as file_error:
+                    self.logger.error(f"Failed to import file {file_path}: {str(file_error)}")
+                    # Continue with next file
+            
+            self.logger.info(f"Imported {len(imported_ids)} test cases")
+            return imported_ids
+            
         except Exception as e:
-            print(f"Error: {str(e)}")
-    
-    else:
-        print("Error: Invalid combination of action and parameters") 
+            self.logger.error(f"Failed to bulk import test cases: {str(e)}")
+            raise MetadataError(f"Failed to bulk import test cases: {str(e)}")
+
+    def export_test_cases_as_zip(self, test_case_ids: List[str], output_path: str,
+                        include_metadata: bool = True) -> str:
+        """
+        Export multiple test cases as a ZIP file.
+        
+        Args:
+            test_case_ids (List[str]): List of test case IDs to export.
+            output_path (str): Path for the output ZIP file.
+            include_metadata (bool, optional): Whether to include metadata in export.
+            
+        Returns:
+            str: Path to the created ZIP file.
+            
+        Raises:
+            MetadataError: If the export fails.
+        """
+        try:
+            import zipfile
+            import tempfile
+            
+            # Create a temporary directory for files
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Export files to the temporary directory
+                self.bulk_export_test_cases(test_case_ids, temp_dir, include_metadata)
+                
+                # Create ZIP file
+                with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    # Add all files from the temporary directory
+                    for root, _, files in os.walk(temp_dir):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            # Calculate the relative path for the archive
+                            arcname = os.path.relpath(file_path, temp_dir)
+                            zipf.write(file_path, arcname)
+            
+            self.logger.info(f"Exported {len(test_case_ids)} test cases to ZIP file: {output_path}")
+            return output_path
+            
+        except Exception as e:
+            self.logger.error(f"Failed to export test cases as ZIP: {str(e)}")
+            raise MetadataError(f"Failed to export test cases as ZIP: {str(e)}")    
+        
+
+
+    def _close_connection_pool(self):
+        """
+        Close the connection pool and release all resources.
+        """
+        try:
+            if hasattr(self, 'connection_pool') and self.connection_pool:
+                self.connection_pool.closeall()
+                self.logger.info("PostgreSQL connection pool closed successfully")
+        except Exception as e:
+            self.logger.error(f"Error closing connection pool: {str(e)}")
+
+    def __del__(self):
+        """
+        Destructor to ensure connection pool is closed when object is deleted.
+        """
+        self._close_connection_pool()
+
+    def vacuum_database(self):
+        """
+        Run VACUUM operation to reclaim storage and update statistics.
+        
+        Returns:
+            bool: True if successful, False otherwise.
+        """
+        conn = None
+        try:
+            # Get a connection directly (not from pool) for VACUUM
+            conn = psycopg2.connect(
+                host=self.db_config['host'],
+                port=self.db_config['port'],
+                dbname=self.db_config['dbname'],
+                user=self.db_config['user'],
+                password=self.db_config['password'],
+                sslmode=self.db_config['sslmode']
+            )
+            
+            # Set autocommit mode required for VACUUM
+            conn.set_session(autocommit=True)
+            
+            cursor = conn.cursor()
+            cursor.execute("VACUUM ANALYZE")
+            
+            self.logger.info("VACUUM ANALYZE completed successfully")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to run VACUUM: {str(e)}")
+            return False
+        finally:
+            if conn:
+                conn.close()
+
+    def check_database_connection(self) -> bool:
+        """
+        Check if the database connection is working.
+        
+        Returns:
+            bool: True if connection is working, False otherwise.
+        """
+        try:
+            query = "SELECT 1"
+            result = self._execute_query(query, fetch_one=True)
+            return result is not None and result[0] == 1
+        except Exception as e:
+            self.logger.error(f"Database connection check failed: {str(e)}")
+            return False
+
+    def get_database_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about the database tables.
+        
+        Returns:
+            Dict[str, Any]: Database statistics.
+        """
+        try:
+            stats = {}
+            
+            # Table row counts
+            tables = ["test_case_metadata", "metadata_history", "tags", "test_case_tags", "test_case_files"]
+            
+            for table in tables:
+                query = f"SELECT COUNT(*) FROM {table}"
+                count = self._execute_query(query, fetch_one=True)[0]
+                stats[f"{table}_count"] = count
+            
+            # Database size
+            size_query = """
+            SELECT pg_size_pretty(pg_database_size(current_database())) as db_size
+            """
+            db_size = self._execute_query(size_query, fetch_one=True)[0]
+            stats["database_size"] = db_size
+            
+            # Table sizes
+            table_sizes_query = """
+            SELECT 
+                relname as table_name,
+                pg_size_pretty(pg_total_relation_size(relid)) as total_size
+            FROM 
+                pg_catalog.pg_statio_user_tables
+            ORDER BY 
+                pg_total_relation_size(relid) DESC
+            """
+            table_sizes = self._execute_query(table_sizes_query, fetch_all=True, as_dict=True)
+            stats["table_sizes"] = table_sizes
+            
+            return stats
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get database stats: {str(e)}")
+            return {"error": str(e)}
+
+    def cleanup_orphaned_data(self) -> Dict[str, int]:
+        """
+        Clean up orphaned data (tags, files without associated test cases).
+        
+        Returns:
+            Dict[str, int]: Count of cleaned items by type.
+        """
+        try:
+            cleanup_stats = {
+                "orphaned_tags": 0,
+                "orphaned_files": 0,
+                "unused_tags": 0
+            }
+            
+            # Remove orphaned tag associations (where test case no longer exists)
+            orphaned_tags_query = """
+            DELETE FROM test_case_tags
+            WHERE test_case_id NOT IN (
+                SELECT TEST_CASE_ID FROM test_case_metadata
+            )
+            """
+            orphaned_tags_count = self._execute_query(orphaned_tags_query)
+            cleanup_stats["orphaned_tags"] = orphaned_tags_count
+            
+            # Remove orphaned files (where test case no longer exists)
+            orphaned_files_query = """
+            DELETE FROM test_case_files
+            WHERE test_case_id NOT IN (
+                SELECT TEST_CASE_ID FROM test_case_metadata
+            )
+            """
+            orphaned_files_count = self._execute_query(orphaned_files_query)
+            cleanup_stats["orphaned_files"] = orphaned_files_count
+            
+            # Remove unused tags (not associated with any test case)
+            unused_tags_query = """
+            DELETE FROM tags
+            WHERE id NOT IN (
+                SELECT tag_id FROM test_case_tags
+            )
+            """
+            unused_tags_count = self._execute_query(unused_tags_query)
+            cleanup_stats["unused_tags"] = unused_tags_count
+            
+            self.logger.info(f"Cleanup completed: {cleanup_stats}")
+            return cleanup_stats
+            
+        except Exception as e:
+            self.logger.error(f"Cleanup failed: {str(e)}")
+            raise DatabaseError(f"Database cleanup failed: {str(e)}")
+
+    def migrate_from_sqlite(self, sqlite_db_path: str) -> Dict[str, int]:
+        """
+        Migrate data from SQLite database to PostgreSQL.
+        
+        Args:
+            sqlite_db_path (str): Path to the SQLite database file.
+            
+        Returns:
+            Dict[str, int]: Migration statistics.
+            
+        Raises:
+            DatabaseError: If migration fails.
+        """
+        try:
+            import sqlite3
+            
+            # Check if SQLite file exists
+            if not os.path.exists(sqlite_db_path):
+                raise DatabaseError(f"SQLite database file not found: {sqlite_db_path}")
+            
+            # Connect to SQLite database
+            sqlite_conn = sqlite3.connect(sqlite_db_path)
+            sqlite_conn.row_factory = sqlite3.Row
+            
+            # Statistics
+            stats = {
+                "test_cases_migrated": 0,
+                "history_records_migrated": 0,
+                "tags_migrated": 0,
+                "tag_associations_migrated": 0
+            }
+            
+            # Migrate test case metadata
+            sqlite_cursor = sqlite_conn.cursor()
+            sqlite_cursor.execute("SELECT * FROM test_case_metadata")
+            test_cases = [dict(row) for row in sqlite_cursor.fetchall()]
+            
+            for tc in test_cases:
+                # Remove SQLite rowid
+                if "id" in tc:
+                    del tc["id"]
+                
+                # Create in PostgreSQL
+                try:
+                    self.create_test_case_metadata(tc, "Migration")
+                    stats["test_cases_migrated"] += 1
+                except Exception as tc_error:
+                    self.logger.error(f"Failed to migrate test case {tc.get('TEST_CASE_ID')}: {str(tc_error)}")
+                    # Continue with next test case
+            
+            # Migrate tags
+            sqlite_cursor.execute("SELECT * FROM tags")
+            tags = [dict(row) for row in sqlite_cursor.fetchall()]
+            
+            tag_id_map = {}  # Map SQLite IDs to PostgreSQL IDs
+            
+            for tag in tags:
+                tag_name = tag["name"]
+                
+                # Insert tag if it doesn't exist
+                tag_query = """
+                INSERT INTO tags (name)
+                VALUES (%s)
+                ON CONFLICT (name) DO NOTHING
+                RETURNING id
+                """
+                
+                tag_result = self._execute_query(tag_query, (tag_name,), fetch_one=True)
+                
+                if tag_result:
+                    new_id = tag_result[0]
+                else:
+                    # Get the ID if already exists
+                    get_id_query = "SELECT id FROM tags WHERE name = %s"
+                    new_id = self._execute_query(get_id_query, (tag_name,), fetch_one=True)[0]
+                
+                tag_id_map[tag["id"]] = new_id
+                stats["tags_migrated"] += 1
+            
+            # Migrate tag associations
+            sqlite_cursor.execute("SELECT * FROM test_case_tags")
+            tag_assocs = [dict(row) for row in sqlite_cursor.fetchall()]
+            
+            for assoc in tag_assocs:
+                test_case_id = assoc["test_case_id"]
+                old_tag_id = assoc["tag_id"]
+                
+                if old_tag_id in tag_id_map:
+                    new_tag_id = tag_id_map[old_tag_id]
+                    
+                    # Insert association
+                    assoc_query = """
+                    INSERT INTO test_case_tags (test_case_id, tag_id)
+                    VALUES (%s, %s)
+                    ON CONFLICT (test_case_id, tag_id) DO NOTHING
+                    """
+                    
+                    self._execute_query(assoc_query, (test_case_id, new_tag_id))
+                    stats["tag_associations_migrated"] += 1
+            
+            # Migrate history
+            sqlite_cursor.execute("SELECT * FROM metadata_history")
+            history = [dict(row) for row in sqlite_cursor.fetchall()]
+            
+            for record in history:
+                # Remove SQLite rowid
+                if "id" in record:
+                    del record["id"]
+                
+                # Insert history record
+                history_query = """
+                INSERT INTO metadata_history
+                (test_case_id, field_name, old_value, new_value, changed_by, changed_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                
+                history_params = (
+                    record["test_case_id"],
+                    record["field_name"],
+                    record["old_value"],
+                    record["new_value"],
+                    record["changed_by"] or "Migration",
+                    datetime.fromisoformat(record["changed_at"]) if "changed_at" in record else datetime.now()
+                )
+                
+                self._execute_query(history_query, history_params)
+                stats["history_records_migrated"] += 1
+            
+            sqlite_conn.close()
+            self.logger.info(f"Migration completed: {stats}")
+            return stats
+            
+        except Exception as e:
+            self.logger.error(f"Migration failed: {str(e)}")
+            raise DatabaseError(f"Migration failed: {str(e)}")
+
+    def restore_from_backup(self, backup_dir: str) -> Dict[str, int]:
+        """
+        Restore database from a backup directory containing JSON and file data.
+        
+        Args:
+            backup_dir (str): Path to the backup directory.
+            
+        Returns:
+            Dict[str, int]: Restoration statistics.
+            
+        Raises:
+            DatabaseError: If restoration fails.
+        """
+        try:
+            stats = {
+                "metadata_restored": 0,
+                "files_restored": 0
+            }
+            
+            # Check if directory exists
+            if not os.path.isdir(backup_dir):
+                raise DatabaseError(f"Backup directory not found: {backup_dir}")
+            
+            # Check for metadata JSON file
+            metadata_file = os.path.join(backup_dir, "metadata.json")
+            if os.path.exists(metadata_file):
+                # Import metadata
+                metadata_count = self.import_metadata_from_json(metadata_file, overwrite=True)
+                stats["metadata_restored"] = metadata_count
+            
+            # Check for files directory
+            files_dir = os.path.join(backup_dir, "files")
+            if os.path.isdir(files_dir):
+                # Import each file
+                for file_name in os.listdir(files_dir):
+                    file_path = os.path.join(files_dir, file_name)
+                    
+                    # Skip directories
+                    if os.path.isdir(file_path):
+                        continue
+                    
+                    try:
+                        # Extract test case ID from filename (assuming format: TC-XXXXX.xlsx)
+                        test_case_id = os.path.splitext(file_name)[0]
+                        
+                        # Check if it's a valid test case ID
+                        if not self.get_test_case_metadata(test_case_id):
+                            # Try to parse test case ID from file content
+                            self.import_test_case_from_excel(file_path, None, "Restoration")
+                        else:
+                            # Just restore the file
+                            with open(file_path, 'rb') as f:
+                                file_content = f.read()
+                            
+                            self.store_test_case_file_content(
+                                test_case_id,
+                                file_name,
+                                file_content,
+                                os.path.splitext(file_name)[1].lstrip('.')
+                            )
+                        
+                        stats["files_restored"] += 1
+                        
+                    except Exception as file_error:
+                        self.logger.error(f"Failed to restore file {file_name}: {str(file_error)}")
+                        # Continue with next file
+            
+            self.logger.info(f"Restoration completed: {stats}")
+            return stats
+            
+        except Exception as e:
+            self.logger.error(f"Restoration failed: {str(e)}")
+            raise DatabaseError(f"Database restoration failed: {str(e)}")
+
+    def create_backup(self, backup_dir: str, include_files: bool = True) -> Dict[str, int]:
+        """
+        Create a backup of the database.
+        
+        Args:
+            backup_dir (str): Directory to store the backup.
+            include_files (bool, optional): Whether to include test case files.
+            
+        Returns:
+            Dict[str, int]: Backup statistics.
+            
+        Raises:
+            DatabaseError: If backup fails.
+        """
+        try:
+            stats = {
+                "metadata_backed_up": 0,
+                "files_backed_up": 0
+            }
+            
+            # Create backup directory if it doesn't exist
+            os.makedirs(backup_dir, exist_ok=True)
+            
+            # Backup metadata
+            metadata_file = os.path.join(backup_dir, "metadata.json")
+            metadata_count = self.export_metadata_to_json(metadata_file)
+            stats["metadata_backed_up"] = metadata_count
+            
+            # Backup files if requested
+            if include_files:
+                files_dir = os.path.join(backup_dir, "files")
+                os.makedirs(files_dir, exist_ok=True)
+                
+                # Get all test case IDs
+                query = "SELECT TEST_CASE_ID FROM test_case_metadata"
+                result = self._execute_query(query, fetch_all=True)
+                test_case_ids = [row[0] for row in result] if result else []
+                
+                # Backup each file
+                for test_case_id in test_case_ids:
+                    try:
+                        file_name, file_type, file_content = self.retrieve_test_case_file_content(test_case_id)
+                        
+                        if file_content:
+                            # Create file name if not present
+                            if not file_name:
+                                file_name = f"{test_case_id}.{file_type or 'xlsx'}"
+                            
+                            # Save file
+                            file_path = os.path.join(files_dir, file_name)
+                            with open(file_path, 'wb') as f:
+                                f.write(file_content)
+                            
+                            stats["files_backed_up"] += 1
+                            
+                    except Exception as file_error:
+                        self.logger.error(f"Failed to backup file for {test_case_id}: {str(file_error)}")
+                        # Continue with next test case
+            
+            self.logger.info(f"Backup completed: {stats}")
+            return stats
+            
+        except Exception as e:
+            self.logger.error(f"Backup failed: {str(e)}")
+            raise DatabaseError(f"Database backup failed: {str(e)}")    

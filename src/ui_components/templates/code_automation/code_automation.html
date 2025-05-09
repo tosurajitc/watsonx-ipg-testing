@@ -1,0 +1,785 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Code & Automation - Watsonx for IPG Testing{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/code_automation/code_automation.css' %}">
+<!-- Code highlighting library -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+{% endblock %}
+
+{% block content_title %}Code & Automation{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'ui_components:dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Code & Automation</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Tab Navigation -->
+    <div class="col-12 mb-4">
+        <ul class="nav nav-tabs" id="codeAutomationTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="code-generation-tab" data-bs-toggle="tab" data-bs-target="#code-generation" type="button" role="tab" aria-controls="code-generation" aria-selected="true">
+                    <i class="fas fa-code me-2"></i>Code Generation Agent
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="uft-automation-tab" data-bs-toggle="tab" data-bs-target="#uft-automation" type="button" role="tab" aria-controls="uft-automation" aria-selected="false">
+                    <i class="fas fa-robot me-2"></i>UFT Automation Check
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="col-12">
+        <div class="tab-content" id="codeAutomationTabContent">
+            <!-- Code Generation Tab -->
+            <div class="tab-pane fade show active" id="code-generation" role="tabpanel" aria-labelledby="code-generation-tab">
+                <div class="row">
+                    <div class="col-lg-5">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-magic me-2"></i>Code Generation Request
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="codeGenerationForm">
+                                    <div class="mb-3">
+                                        <label for="targetLanguage" class="form-label">Target Language/Framework</label>
+                                        <select class="form-select" id="targetLanguage" required>
+                                            <option value="" selected disabled>Select language/framework</option>
+                                            <optgroup label="Web Automation">
+                                                <option value="python-selenium">Python (Selenium)</option>
+                                                <option value="java-selenium">Java (Selenium)</option>
+                                            <optgroup label="UFT">
+                                                <option value="vbscript-uft">VBScript (UFT)</option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="codeDescription" class="form-label">Describe what you need</label>
+                                        <textarea class="form-control" id="codeDescription" rows="6" required placeholder="E.g., Generate code to click button with ID 'submit' after waiting for it to be clickable"></textarea>
+                                        <div class="form-text">Be specific about the action, selectors, and any special conditions or error handling needed.</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Additional Options</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="includeComments" checked>
+                                            <label class="form-check-label" for="includeComments">
+                                                Include detailed comments
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="includeErrorHandling" checked>
+                                            <label class="form-check-label" for="includeErrorHandling">
+                                                Include error handling
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="includeImports">
+                                            <label class="form-check-label" for="includeImports">
+                                                Include necessary imports/libraries
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary" id="generateCodeBtn">
+                                            <i class="fas fa-bolt me-2"></i>Generate Code
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <!-- Examples Panel -->
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-lightbulb me-2"></i>Example Requests
+                                    </h5>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#examplesCollapse" aria-expanded="false" aria-controls="examplesCollapse">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapse" id="examplesCollapse">
+                                <div class="card-body">
+                                    <div class="example-list">
+                                        <div class="example-item mb-2 p-2 border-start border-4 border-primary ps-3">
+                                            <h6 class="mb-1">Login Form Automation</h6>
+                                            <p class="mb-0 small code-example">Generate Python Selenium code to login to a website by entering username "admin" in field with id "username", password "password123" in field with id "password", and clicking the button with class "login-button".</p>
+                                            <button class="btn btn-sm btn-link p-0 mt-1 use-example-btn">Use this example</button>
+                                        </div>
+                                        <div class="example-item mb-2 p-2 border-start border-4 border-primary ps-3">
+                                            <h6 class="mb-1">API Testing</h6>
+                                            <p class="mb-0 small code-example">Generate Python Requests code to make a POST request to "https://api.example.com/users" with JSON body {"name": "John", "email": "john@example.com"} and bearer token authentication.</p>
+                                            <button class="btn btn-sm btn-link p-0 mt-1 use-example-btn">Use this example</button>
+                                        </div>
+                                        <div class="example-item mb-2 p-2 border-start border-4 border-primary ps-3">
+                                            <h6 class="mb-1">Data Validation</h6>
+                                            <p class="mb-0 small code-example">Create JavaScript Cypress code to verify that a table with id "results-table" contains at least 5 rows and that the first column of the 3rd row contains the text "Approved".</p>
+                                            <button class="btn btn-sm btn-link p-0 mt-1 use-example-btn">Use this example</button>
+                                        </div>
+                                        <div class="example-item mb-0 p-2 border-start border-4 border-primary ps-3">
+                                            <h6 class="mb-1">File Upload</h6>
+                                            <p class="mb-0 small code-example">Generate Java Selenium code to upload a file "test.pdf" to a file input with id "file-upload" and then click the submit button with id "upload-submit".</p>
+                                            <button class="btn btn-sm btn-link p-0 mt-1 use-example-btn">Use this example</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-7">
+                        <!-- Generated Code Panel -->
+                        <div class="card code-output-card">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-terminal me-2"></i>Generated Code
+                                        <span class="badge bg-primary ms-2" id="codeLanguageBadge">Python</span>
+                                    </h5>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-secondary" id="copyCodeBtn" disabled>
+                                            <i class="fas fa-copy me-1"></i>Copy
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" id="downloadCodeBtn" disabled>
+                                            <i class="fas fa-download me-1"></i>Download
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="code-container" id="codeContainer">
+                                    <pre><code class="language-python" id="generatedCode">
+# Your generated code will appear here
+# Select a language and describe what you need
+
+# Example:
+# - Click a button
+# - Submit a form
+# - Validate text on a page
+                                    </code></pre>
+                                </div>
+                            </div>
+                            <div class="card-footer" id="codeFooter" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <button class="btn btn-primary" id="refineRequestBtn">
+                                            <i class="fas fa-sliders-h me-1"></i>Refine This Code
+                                        </button>
+                                    </div>
+                                    <span class="text-muted small" id="codeGenerationTime"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Code Refinement Panel -->
+                        <div class="card mt-3" id="refinementPanel" style="display: none;">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-edit me-2"></i>Refine Code
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="refinement-options mb-3">
+                                    <div class="mb-3">
+                                        <label for="refinementRequest" class="form-label">What would you like to change?</label>
+                                        <textarea class="form-control" id="refinementRequest" rows="3" placeholder="E.g., Add explicit waits, use CSS selectors instead of XPath, optimize the error handling"></textarea>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="button" class="btn btn-primary" id="applyRefinementBtn">
+                                            <i class="fas fa-sync-alt me-2"></i>Apply Changes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UFT Automation Check Tab -->
+            <div class="tab-pane fade" id="uft-automation" role="tabpanel" aria-labelledby="uft-automation-tab">
+                <div class="row">
+                    <div class="col-lg-5">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-tasks me-2"></i>Test Case Selection
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="uftCheckForm">
+                                    <div class="mb-3">
+                                        <label for="testCaseSource" class="form-label">Test Case Source</label>
+                                        <select class="form-select" id="testCaseSource" required>
+                                            <option value="repository" selected>Test Repository</option>
+                                            <option value="upload">Upload Test Case</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Repository Selection (default) -->
+                                    <div id="repositorySelection">
+                                        <div class="mb-3">
+                                            <label for="testCaseRepository" class="form-label">Select Repository</label>
+                                            <select class="form-select" id="testCaseRepository">
+                                                <option value="sharepoint" selected>SharePoint</option>
+                                                <option value="jira">Jira</option>
+                                                <option value="alm">ALM</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="testCaseSearch" class="form-label">Search Test Cases</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="testCaseSearch" placeholder="Search by ID or name">
+                                                <button class="btn btn-outline-secondary" type="button" id="searchTestCasesBtn">
+                                                    <i class="fas fa-search"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="testCaseList" class="form-label">Select Test Case</label>
+                                            <select class="form-select" id="testCaseList" size="6" required>
+                                                <option value="TC-1001">TC-1001: Login Functionality</option>
+                                                <option value="TC-1002">TC-1002: User Registration</option>
+                                                <option value="TC-1003">TC-1003: Password Reset</option>
+                                                <option value="TC-2001">TC-2001: Product Search</option>
+                                                <option value="TC-2002">TC-2002: Shopping Cart</option>
+                                                <option value="TC-3001">TC-3001: Payment Processing</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- File Upload (alternative) -->
+                                    <div id="fileUploadSelection" style="display: none;">
+                                        <div class="mb-3">
+                                            <label for="testCaseFile" class="form-label">Upload Test Case File</label>
+                                            <input class="form-control" type="file" id="testCaseFile" accept=".xlsx,.xls,.pdf,.doc,.docx,.txt">
+                                            <div class="form-text">Supported formats: Excel, PDF, Word, Text</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="automationScope" class="form-label">Automation Scope</label>
+                                        <select class="form-select" id="automationScope">
+                                            <option value="full" selected>Full Test Case</option>
+                                            <option value="partial">Selected Steps Only</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3" id="stepSelectionContainer" style="display: none;">
+                                        <label class="form-label">Select Steps to Analyze</label>
+                                        <div class="step-selection-list">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="step1" checked>
+                                                <label class="form-check-label" for="step1">Step 1: Navigate to login page</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="step2" checked>
+                                                <label class="form-check-label" for="step2">Step 2: Enter username in the input field</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="step3" checked>
+                                                <label class="form-check-label" for="step3">Step 3: Enter password in the input field</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="step4" checked>
+                                                <label class="form-check-label" for="step4">Step 4: Click the login button</label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="step5" checked>
+                                                <label class="form-check-label" for="step5">Step 5: Verify welcome message is displayed</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary" id="analyzeAutomationBtn">
+                                            <i class="fas fa-robot me-2"></i>Analyze for UFT Automation
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <!-- Test Case Preview -->
+                        <div class="card mt-3" id="testCasePreview">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-clipboard-list me-2"></i>Test Case Preview
+                                    </h5>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#previewCollapse" aria-expanded="true" aria-controls="previewCollapse">
+                                        <i class="fas fa-chevron-up"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="collapse show" id="previewCollapse">
+                                <div class="card-body">
+                                    <h6 class="mb-2">TC-1001: Login Functionality</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th width="10%">Step #</th>
+                                                    <th width="45%">Action</th>
+                                                    <th width="45%">Expected Result</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>1</td>
+                                                    <td>Navigate to login page</td>
+                                                    <td>Login page is displayed</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>2</td>
+                                                    <td>Enter username in the input field</td>
+                                                    <td>Username is entered</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>3</td>
+                                                    <td>Enter password in the input field</td>
+                                                    <td>Password is entered</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>4</td>
+                                                    <td>Click the login button</td>
+                                                    <td>Login form is submitted</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>5</td>
+                                                    <td>Verify welcome message is displayed</td>
+                                                    <td>Welcome message appears with correct username</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-7">
+                        <!-- Analysis Results Panel -->
+                        <div class="card analysis-results-card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-chart-pie me-2"></i>Automation Analysis Results
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Initial state: placeholder -->
+                                <div class="analysis-placeholder" id="analysisPlaceholder">
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-robot fa-4x text-muted mb-3"></i>
+                                        <h5>UFT Automation Analysis</h5>
+                                        <p class="text-muted">Select a test case and click "Analyze for UFT Automation" to see the automation potential analysis.</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Analysis in progress -->
+                                <div class="analysis-loading" id="analysisLoading" style="display: none;">
+                                    <div class="text-center py-5">
+                                        <div class="spinner-border text-primary mb-3" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <h5>Analyzing Test Case</h5>
+                                        <p class="text-muted">Please wait while we assess automation potential...</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Analysis results (hidden initially) -->
+                                <div class="analysis-results" id="analysisResults" style="display: none;">
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            <div class="card h-100">
+                                                <div class="card-body text-center">
+                                                    <h6 class="card-subtitle mb-2 text-muted">Automation Potential</h6>
+                                                    <div class="automation-score-circle my-3">
+                                                        <span class="automation-score" id="automationScore">85%</span>
+                                                    </div>
+                                                    <h5 class="automation-rating" id="automationRating">High Potential</h5>
+                                                    <p class="automation-summary" id="automationSummary">Standard UI elements with predictable interactions</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-subtitle mb-3 text-muted">Complexity Breakdown</h6>
+                                                    <div class="complexity-bars">
+                                                        <div class="mb-3">
+                                                            <div class="d-flex justify-content-between mb-1">
+                                                                <span>UI Interaction</span>
+                                                                <span class="badge bg-success">Low</span>
+                                                            </div>
+                                                            <div class="progress" style="height: 8px;">
+                                                                <div class="progress-bar bg-success" role="progressbar" style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <div class="d-flex justify-content-between mb-1">
+                                                                <span>Data Handling</span>
+                                                                <span class="badge bg-success">Low</span>
+                                                            </div>
+                                                            <div class="progress" style="height: 8px;">
+                                                                <div class="progress-bar bg-success" role="progressbar" style="width: 30%" aria-valuenow="30" aria-valuemin="0" aria-valuemax="100"></div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <div class="d-flex justify-content-between mb-1">
+                                                                <span>Verification Points</span>
+                                                                <span class="badge bg-warning">Medium</span>
+                                                            </div>
+                                                            <div class="progress" style="height: 8px;">
+                                                                <div class="progress-bar bg-warning" role="progressbar" style="width: 60%" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div class="d-flex justify-content-between mb-1">
+                                                                <span>Technical Challenges</span>
+                                                                <span class="badge bg-success">Low</span>
+                                                            </div>
+                                                            <div class="progress" style="height: 8px;">
+                                                                <div class="progress-bar bg-success" role="progressbar" style="width: 20%" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-light">
+                                            <h6 class="card-title mb-0">Detailed Analysis</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="step-analysis">
+                                                <h6>Step-by-Step Breakdown</h6>
+                                                <div class="table-responsive">
+                                                    <table class="table table-bordered table-sm">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>Step</th>
+                                                                <th>Automation Difficulty</th>
+                                                                <th>Notes</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="stepAnalysisTable">
+                                                            <tr>
+                                                                <td>Step 1: Navigate to login page</td>
+                                                                <td><span class="badge bg-success">Easy</span></td>
+                                                                <td>Standard navigation action</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Step 2: Enter username in the input field</td>
+                                                                <td><span class="badge bg-success">Easy</span></td>
+                                                                <td>Simple input field interaction</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Step 3: Enter password in the input field</td>
+                                                                <td><span class="badge bg-success">Easy</span></td>
+                                                                <td>Simple input field interaction</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Step 4: Click the login button</td>
+                                                                <td><span class="badge bg-success">Easy</span></td>
+                                                                <td>Standard button click</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Step 5: Verify welcome message is displayed</td>
+                                                                <td><span class="badge bg-warning">Medium</span></td>
+                                                                <td>Requires text verification, may need wait condition</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card mb-4">
+                                        <div class="card-header bg-light">
+                                            <h6 class="card-title mb-0">Recommendations</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <h6>Suggested UFT Approach</h6>
+                                                <p id="uftApproachRecommendation">Based on the analysis, this test case is highly suitable for UFT automation using standard object identification methods. The test involves standard web UI elements that can be easily recognized by UFT's Object Repository.</p>
+                                            </div>
+                                            <div class="mb-3">
+                                                <h6>Recommended UFT Libraries/Add-ins</h6>
+                                                <ul id="uftLibrariesList">
+                                                    <li><strong>Web Add-in:</strong> For web browser automation capabilities</li>
+                                                    <li><strong>ActiveX Add-in:</strong> For desktop application components if necessary</li>
+                                                    <li><strong>Web Extensions:</strong> For enhanced HTML object recognition</li>
+                                                </ul>
+                                            </div>
+                                            <div>
+                                                <h6>Potential Challenges & Solutions</h6>
+                                                <dl id="challengesList">
+                                                    <dt>Dynamic Elements</dt>
+                                                    <dd>If any login page elements have dynamic IDs, use descriptive properties or regular expressions in object definitions.</dd>
+                                                    
+                                                    <dt>Verification Timing</dt>
+                                                    <dd>Implement Sync Point or Wait statements before welcome message verification to ensure the page has loaded completely.</dd>
+                                                </dl>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="card">
+                                        <div class="card-header bg-light">
+                                            <h6 class="card-title mb-0">Automation Starter Code</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="code-container">
+                                                <pre><code class="language-vbscript" id="uftStarterCode">
+'UFT Script - Login Functionality Automation
+'Generated for test case TC-1001
+
+'==========================================================
+' Description: Automated test for login functionality
+' Author: Watsonx for IPG Testing
+' Date: May 9, 2025
+'==========================================================
+
+' Load required libraries and set defaults
+LoadFunctionLibrary("CommonFunctions.qfl")
+Option Explicit
+
+' Navigate to application
+SystemUtil.Run "chrome.exe", "https://example.com/login"
+Wait 3
+
+' Set up the object repository references
+With Browser("name:=Login Page").Page("title:=Login")
+    
+    ' Step 1: Verify login page is displayed
+    If .Exist(10) Then
+        Reporter.ReportEvent micPass, "Navigate to Login", "Login page loaded successfully"
+    Else
+        Reporter.ReportEvent micFail, "Navigate to Login", "Failed to load login page"
+        ExitTest
+    End If
+    
+    ' Step 2: Enter username
+    .WebEdit("name:=username").Set "testuser"
+    Reporter.ReportEvent micPass, "Enter Username", "Username entered successfully"
+    
+    ' Step 3: Enter password
+    .WebEdit("name:=password").Set "password123"
+    Reporter.ReportEvent micPass, "Enter Password", "Password entered successfully"
+    
+    ' Step 4: Click login button
+    .WebButton("name:=login").Click
+    Reporter.ReportEvent micPass, "Click Login", "Login button clicked successfully"
+    
+    ' Step 5: Verify welcome message
+    Wait 2
+    If Browser("name:=Dashboard").Page("title:=Dashboard").WebElement("innertext:=Welcome, testuser").Exist(10) Then
+        Reporter.ReportEvent micPass, "Verify Welcome Message", "Welcome message displayed correctly"
+    Else
+        Reporter.ReportEvent micFail, "Verify Welcome Message", "Welcome message not found or incorrect"
+    End If
+End With
+                                                </code></pre>
+                                            </div>
+                                            <div class="d-flex justify-content-end mt-3">
+                                                <button class="btn btn-outline-secondary me-2" id="copyUftCodeBtn">
+                                                    <i class="fas fa-copy me-1"></i>Copy Code
+                                                </button>
+                                                <button class="btn btn-outline-secondary" id="downloadUftCodeBtn">
+                                                    <i class="fas fa-download me-1"></i>Download
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between mt-4">
+                                        <button class="btn btn-primary" id="generateFullScriptBtn">
+                                            <i class="fas fa-file-code me-1"></i>Generate Full UFT Script
+                                        </button>
+                                        <button class="btn btn-outline-secondary" id="exportAnalysisBtn">
+                                            <i class="fas fa-file-export me-1"></i>Export Analysis Report
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Code Refinement Modal -->
+<div class="modal fade" id="refinementModal" tabindex="-1" aria-labelledby="refinementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="refinementModalLabel">Code Refinement Options</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="refinementOptionsForm">
+                    <div class="mb-3">
+                        <label class="form-label">What would you like to change?</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="optionAddComments">
+                            <label class="form-check-label" for="optionAddComments">
+                                Add more detailed comments
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="optionEnhanceErrorHandling">
+                            <label class="form-check-label" for="optionEnhanceErrorHandling">
+                                Enhance error handling and recovery
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="optionOptimizeCode">
+                            <label class="form-check-label" for="optionOptimizeCode">
+                                Optimize code for performance
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="optionChangeSelectors">
+                            <label class="form-check-label" for="optionChangeSelectors">
+                                Use different selectors (e.g., CSS instead of XPath)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="optionIncludeWaits">
+                            <label class="form-check-label" for="optionIncludeWaits">
+                                Include explicit waits for better synchronization
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customRefinementRequest" class="form-label">Custom Refinement Request</label>
+                        <textarea class="form-control" id="customRefinementRequest" rows="3" placeholder="Describe any other changes you'd like to make to the code..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitRefinementOptions">Apply Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Full Script Generation Modal -->
+<div class="modal fade" id="fullScriptModal" tabindex="-1" aria-labelledby="fullScriptModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fullScriptModalLabel">Generate Full UFT Script</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="fullScriptOptionsForm">
+                    <div class="mb-3">
+                        <label for="scriptName" class="form-label">Script Name</label>
+                        <input type="text" class="form-control" id="scriptName" value="TC1001_Login_Functionality">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="scriptAuthor" class="form-label">Author</label>
+                                <input type="text" class="form-control" id="scriptAuthor" value="Watsonx for IPG Testing">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="scriptVersion" class="form-label">Version</label>
+                                <input type="text" class="form-control" id="scriptVersion" value="1.0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Script Components</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="includeHeader" checked>
+                            <label class="form-check-label" for="includeHeader">
+                                Include Header Documentation
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="includeEnvironmentSetup" checked>
+                            <label class="form-check-label" for="includeEnvironmentSetup">
+                                Include Environment Setup
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="includeErrorRecovery" checked>
+                            <label class="form-check-label" for="includeErrorRecovery">
+                                Include Error Recovery Scenarios
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="includeCleanup" checked>
+                            <label class="form-check-label" for="includeCleanup">
+                                Include Cleanup Actions
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="includeReporting" checked>
+                            <label class="form-check-label" for="includeReporting">
+                                Include Enhanced Reporting
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="additionalNotes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="additionalNotes" rows="2" placeholder="Any specific requirements or considerations for this script..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="generateFullScriptSubmit">Generate Script</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Toast for notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+    <div id="successToast" class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-check-circle me-2"></i>
+                <span id="toastMessage">Operation completed successfully!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Highlight.js for code syntax highlighting -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/csharp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/vbscript.min.js"></script>
+
+<!-- Custom JS for this page -->
+<script src="{% static 'js/code_automation/code_automation.js' %}"></script>
+{% endblock %}

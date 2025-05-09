@@ -22,11 +22,14 @@ from src.common.logging.log_utils import setup_logger
 from src.common.exceptions.custom_exceptions import (
     TemplateNotFoundError, 
     ScenarioValidationError, 
-    TestCaseGenerationError
+    TestCaseGenerationError,
+    LLMConnectionError,
+    LLMResponseError    
 )
 
 # Import from other modules in phase1
-from src.phase1.llm_test_scenario_generator.scenario_validator import validate_scenario
+from src.phase1.llm_test_scenario_generator.scenario_validator import ScenarioValidator
+from src.phase1.test_case_manager.testcase_refiner import LLMHelper
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -121,7 +124,10 @@ class TestCaseGenerator:
         """
         # Validate the scenario first
         try:
-            validate_scenario(scenario)
+            validator = ScenarioValidator()
+            validation_result = validator.validate_scenario(scenario)
+            if not validation_result['valid']:
+                raise Exception(f"Invalid scenario: {validation_result['issues']}")
         except Exception as e:
             self.logger.error(f"Invalid scenario format: {str(e)}")
             raise ScenarioValidationError(f"Invalid scenario format: {str(e)}")
@@ -173,6 +179,80 @@ class TestCaseGenerator:
             self.logger.error(f"Failed to generate test case: {str(e)}")
             raise TestCaseGenerationError(f"Failed to generate test case: {str(e)}")
     
+
+
+
+    # Add this new method to the TestCaseGenerator class
+    def generate_test_case_from_prompt(self, prompt: str) -> pd.DataFrame:
+        """
+        Generate a test case from a simple text prompt using LLM.
+        
+        Args:
+            prompt (str): Simple text prompt like "Generate login test cases for Admin user"
+            
+        Returns:
+            pd.DataFrame: The generated test case as a DataFrame.
+            
+        Raises:
+            TestCaseGenerationError: If test case generation fails.
+        """
+        try:
+            self.logger.info(f"Generating test case from prompt: '{prompt}'")
+            
+            # Use LLM helper to get test case structure
+            llm_helper = LLMHelper()
+            test_case_data = llm_helper.generate_test_case_structure(prompt)
+            
+            # Extract steps from the structure
+            steps = test_case_data.get("steps", [])
+            if not steps:
+                raise TestCaseGenerationError("The LLM did not generate any test steps. Cannot create a test case without steps.")
+            
+            # Create test case rows
+            test_case_rows = []
+            
+            # Add each step as a row
+            for step in steps:
+                row = {
+                    "SUBJECT": test_case_data.get("SUBJECT", ""),
+                    "TEST CASE": test_case_data.get("TEST CASE", ""),
+                    "TEST CASE NUMBER": test_case_data.get("TEST CASE NUMBER", ""),
+                    "STEP NO": step.get("STEP NO", ""),
+                    "TEST STEP DESCRIPTION": step.get("TEST STEP DESCRIPTION", ""),
+                    "DATA": step.get("DATA", ""),
+                    "REFERENCE VALUES": step.get("REFERENCE VALUES", ""),
+                    "VALUES": step.get("VALUES", ""),
+                    "EXPECTED RESULT": step.get("EXPECTED RESULT", ""),
+                    "TRANS CODE": step.get("TRANS CODE", ""),
+                    "TEST USER ID/ROLE": step.get("TEST USER ID/ROLE", ""),
+                    "STATUS": step.get("STATUS", ""),
+                    "TYPE": test_case_data.get("TYPE", "")
+                }
+                test_case_rows.append(row)
+            
+            # Create DataFrame
+            test_case_df = pd.DataFrame(test_case_rows)
+            
+            # Validate the generated test case
+            self.validate_test_case_structure(test_case_df)
+            
+            self.logger.info(f"Successfully generated test case with {len(test_case_rows)} steps from prompt")
+            return test_case_df
+            
+        except LLMConnectionError as e:
+            self.logger.error(f"LLM connection error: {str(e)}")
+            raise TestCaseGenerationError(f"Failed to connect to LLM service: {str(e)}")
+            
+        except LLMResponseError as e:
+            self.logger.error(f"LLM response error: {str(e)}")
+            raise TestCaseGenerationError(f"The LLM failed to generate a valid test case: {str(e)}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to generate test case from prompt: {str(e)}")
+            raise TestCaseGenerationError(f"Failed to generate test case from prompt: {str(e)}")
+    
+
+
     def generate_test_cases_batch(self, scenarios: List[Dict[str, Any]]) -> Dict[str, pd.DataFrame]:
         """
         Generate multiple test cases from a list of scenarios.

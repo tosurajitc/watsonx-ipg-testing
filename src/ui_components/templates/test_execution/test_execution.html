@@ -1,0 +1,1675 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Test Execution | Watsonx for IPG Testing{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/test_execution/test_execution.css' %}">
+{% endblock %}
+
+{% block content_title %}Test Execution{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'ui_components:dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active" aria-current="page">Test Execution</li>
+{% endblock %}
+
+{% block content %}
+<!-- Execution Summary Dashboard Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="card-icon total-icon">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="summary-value">245</div>
+                        <div class="summary-label">Total Test Cases</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="card-icon running-icon">
+                        <i class="fas fa-spinner"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="summary-value">3</div>
+                        <div class="summary-label">Currently Running</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="card-icon success-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="summary-value">187</div>
+                        <div class="summary-label">Passed</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="card-icon failed-icon">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="summary-value">12</div>
+                        <div class="summary-label">Failed</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs Navigation for Execution Sections -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body p-0">
+                <ul class="nav nav-tabs nav-fill" id="executionTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="initiate-tab" data-bs-toggle="tab" data-bs-target="#initiate" type="button" role="tab" aria-controls="initiate" aria-selected="true">
+                            <i class="fas fa-play-circle me-2"></i>Initiate Execution
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="false">
+                            <i class="fas fa-tachometer-alt me-2"></i>Execution Dashboard
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="upload-results-tab" data-bs-toggle="tab" data-bs-target="#upload-results" type="button" role="tab" aria-controls="upload-results" aria-selected="false">
+                            <i class="fas fa-upload me-2"></i>Upload Manual Results
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tab Content -->
+<div class="tab-content" id="executionTabsContent">
+    <!-- Initiate Execution Tab -->
+    <div class="tab-pane fade show active" id="initiate" role="tabpanel" aria-labelledby="initiate-tab">
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Test Case Selection -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Select Test Cases</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-success" id="selectAllBtn">
+                                <i class="fas fa-check-square me-1"></i> Select All
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" id="deselectAllBtn">
+                                <i class="fas fa-square me-1"></i> Deselect All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Search and Filter Controls -->
+                        <div class="filters-section mb-3">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        <input type="text" class="form-control" id="search-test-cases" placeholder="Search test cases...">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select" id="filter-status">
+                                        <option value="">All Statuses</option>
+                                        <option value="active">Active</option>
+                                        <option value="maintenance">Under Maintenance</option>
+                                        <option value="obsolete">Obsolete</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select" id="filter-type">
+                                        <option value="">All Types</option>
+                                        <option value="manual">Manual</option>
+                                        <option value="automated">Automated</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Test Case Table -->
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="execution-test-cases-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 5%">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                                            </div>
+                                        </th>
+                                        <th style="width: 10%">ID</th>
+                                        <th style="width: 40%">Title</th>
+                                        <th style="width: 15%">Status</th>
+                                        <th style="width: 15%">Type</th>
+                                        <th style="width: 15%">Last Executed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input test-case-checkbox" type="checkbox" value="TC-1001">
+                                            </div>
+                                        </td>
+                                        <td>TC-1001</td>
+                                        <td>Verify login with valid credentials</td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                        <td><span class="badge bg-info">Automated</span></td>
+                                        <td>2025-04-25</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input test-case-checkbox" type="checkbox" value="TC-1002">
+                                            </div>
+                                        </td>
+                                        <td>TC-1002</td>
+                                        <td>Verify login with invalid credentials</td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                        <td><span class="badge bg-info">Automated</span></td>
+                                        <td>2025-04-25</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input test-case-checkbox" type="checkbox" value="TC-1003" disabled>
+                                            </div>
+                                        </td>
+                                        <td>TC-1003</td>
+                                        <td>Verify password recovery functionality</td>
+                                        <td><span class="badge bg-warning">Under Maintenance</span></td>
+                                        <td><span class="badge bg-info">Automated</span></td>
+                                        <td>2025-04-20</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input test-case-checkbox" type="checkbox" value="TC-1004">
+                                            </div>
+                                        </td>
+                                        <td>TC-1004</td>
+                                        <td>Verify user profile update</td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                        <td><span class="badge bg-secondary">Manual</span></td>
+                                        <td>2025-04-18</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input test-case-checkbox" type="checkbox" value="TC-1005" disabled>
+                                            </div>
+                                        </td>
+                                        <td>TC-1005</td>
+                                        <td>Verify user account deletion</td>
+                                        <td><span class="badge bg-danger">Obsolete</span></td>
+                                        <td><span class="badge bg-secondary">Manual</span></td>
+                                        <td>2025-03-15</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input test-case-checkbox" type="checkbox" value="TC-1006">
+                                            </div>
+                                        </td>
+                                        <td>TC-1006</td>
+                                        <td>Verify checkout process</td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                        <td><span class="badge bg-info">Automated</span></td>
+                                        <td>2025-04-24</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input test-case-checkbox" type="checkbox" value="TC-1007">
+                                            </div>
+                                        </td>
+                                        <td>TC-1007</td>
+                                        <td>Verify payment processing</td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                        <td><span class="badge bg-info">Automated</span></td>
+                                        <td>2025-04-22</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <nav aria-label="Test cases pagination">
+                            <ul class="pagination justify-content-end">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                                </li>
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <!-- Execution Configuration Card -->
+                <div class="card mb-4 sticky-top" style="top: 20px; z-index: 100;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Execution Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="executionConfigForm">
+                            <!-- Execution Name -->
+                            <div class="mb-3">
+                                <label for="executionName" class="form-label">Execution Name</label>
+                                <input type="text" class="form-control" id="executionName" placeholder="Enter a name for this execution run">
+                            </div>
+
+                            <!-- Execution Type -->
+                            <div class="mb-3">
+                                <label class="form-label">Execution Type</label>
+                                <div class="d-flex">
+                                    <div class="form-check me-4">
+                                        <input class="form-check-input" type="radio" name="executionType" id="automatedExecution" value="automated" checked>
+                                        <label class="form-check-label" for="automatedExecution">
+                                            Automated
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="executionType" id="manualExecution" value="manual">
+                                        <label class="form-check-label" for="manualExecution">
+                                            Manual
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Automated Execution Options -->
+                            <div id="automatedOptions">
+                                <div class="mb-3">
+                                    <label for="controllerFile" class="form-label">Controller File</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="controllerFile" value="/path/to/controller.xlsx" readonly>
+                                        <button class="btn btn-outline-secondary" type="button" id="changeControllerBtn">Change</button>
+                                    </div>
+                                    <div class="form-text">Current target file for automated execution control</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="driverScript" class="form-label">Driver Script</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="driverScript" value="/path/to/driver_script.py" readonly>
+                                        <button class="btn btn-outline-secondary" type="button" id="changeDriverBtn">Change</button>
+                                    </div>
+                                    <div class="form-text">Script that will control the test execution</div>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="generateTestData" checked>
+                                    <label class="form-check-label" for="generateTestData">
+                                        Generate missing test data before execution
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Manual Execution Options -->
+                            <div id="manualOptions" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="assignTester" class="form-label">Assign Tester</label>
+                                    <select class="form-select" id="assignTester">
+                                        <option value="">Select Tester</option>
+                                        <option value="john.doe">John Doe</option>
+                                        <option value="jane.smith">Jane Smith</option>
+                                        <option value="alex.wilson">Alex Wilson</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="dueDate" class="form-label">Due Date</label>
+                                    <input type="date" class="form-control" id="dueDate">
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="sendTestCaseDetails" checked>
+                                    <label class="form-check-label" for="sendTestCaseDetails">
+                                        Include test case details in notification
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Selected Test Cases Summary -->
+                            <div class="selected-cases-summary mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <label class="form-label">Selected Test Cases:</label>
+                                    <span class="badge bg-primary" id="selectedCount">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <small class="text-muted">Automated:</small>
+                                    <span class="badge bg-info" id="automatedCount">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <small class="text-muted">Manual:</small>
+                                    <span class="badge bg-secondary" id="manualCount">0</span>
+                                </div>
+                            </div>
+
+                            <!-- Execute Button (Automated) -->
+                            <div id="automatedExecuteBtn" class="d-grid mb-3">
+                                <button type="button" class="btn btn-primary" id="prepareRunTestsBtn">
+                                    <i class="fas fa-play me-2"></i>Prepare & Run Automated Tests
+                                </button>
+                            </div>
+                            
+                            <!-- Execute Button (Manual) -->
+                            <div id="manualExecuteBtn" class="d-grid" style="display: none;">
+                                <button type="button" class="btn btn-primary" id="notifyTesterBtn">
+                                    <i class="fas fa-bell me-2"></i>Notify Tester(s) for Manual Execution
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<!-- Execution Dashboard Tab -->
+    <div class="tab-pane fade" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Execution Runs</h5>
+                        <div>
+                            <select class="form-select form-select-sm d-inline-block me-2" style="width: 150px;" id="dashboard-filter">
+                                <option value="all">All Runs</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary" id="refreshDashboardBtn">
+                                <i class="fas fa-sync-alt me-1"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="execution-runs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Run ID</th>
+                                        <th>Name</th>
+                                        <th>Status</th>
+                                        <th>Type</th>
+                                        <th>Start Time</th>
+                                        <th>End Time</th>
+                                        <th>Progress</th>
+                                        <th>Results</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>RUN-1001</td>
+                                        <td>Login Test Suite</td>
+                                        <td><span class="badge bg-success">Completed</span></td>
+                                        <td><span class="badge bg-info">Automated</span></td>
+                                        <td>2025-05-09 09:30:00</td>
+                                        <td>2025-05-09 09:35:12</td>
+                                        <td>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="text-success">12 </span>/<span class="text-danger"> 0</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary view-run-details" data-id="RUN-1001" title="View Details"><i class="fas fa-eye"></i></button>
+                                                <button type="button" class="btn btn-outline-warning analyze-failures" data-id="RUN-1001" title="Analyze Failures" disabled><i class="fas fa-search"></i></button>
+                                                <button type="button" class="btn btn-outline-info view-report" data-id="RUN-1001" title="View Report"><i class="fas fa-file-alt"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>RUN-1002</td>
+                                        <td>Checkout Process Tests</td>
+                                        <td><span class="badge bg-warning">In Progress</span></td>
+                                        <td><span class="badge bg-info">Automated</span></td>
+                                        <td>2025-05-09 09:45:00</td>
+                                        <td>--</td>
+                                        <td>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" style="width: 60%" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="text-success">3 </span>/<span class="text-danger"> 1</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary view-run-details" data-id="RUN-1002" title="View Details"><i class="fas fa-eye"></i></button>
+                                                <button type="button" class="btn btn-outline-danger abort-run" data-id="RUN-1002" title="Abort Run"><i class="fas fa-stop"></i></button>
+                                                <button type="button" class="btn btn-outline-info view-report" data-id="RUN-1002" title="View Report" disabled><i class="fas fa-file-alt"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>RUN-1003</td>
+                                        <td>Payment Processing Tests</td>
+                                        <td><span class="badge bg-danger">Failed</span></td>
+                                        <td><span class="badge bg-info">Automated</span></td>
+                                        <td>2025-05-09 08:30:00</td>
+                                        <td>2025-05-09 08:45:23</td>
+                                        <td>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar bg-danger" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="text-success">4 </span>/<span class="text-danger"> 3</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary view-run-details" data-id="RUN-1003" title="View Details"><i class="fas fa-eye"></i></button>
+                                                <button type="button" class="btn btn-outline-warning analyze-failures" data-id="RUN-1003" title="Analyze Failures"><i class="fas fa-search"></i></button>
+                                                <button type="button" class="btn btn-outline-info view-report" data-id="RUN-1003" title="View Report"><i class="fas fa-file-alt"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>RUN-1004</td>
+                                        <td>User Profile Tests</td>
+                                        <td><span class="badge bg-secondary">Scheduled</span></td>
+                                        <td><span class="badge bg-secondary">Manual</span></td>
+                                        <td>2025-05-10 10:00:00</td>
+                                        <td>--</td>
+                                        <td>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="text-success">0 </span>/<span class="text-danger"> 0</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary view-run-details" data-id="RUN-1004" title="View Details"><i class="fas fa-eye"></i></button>
+                                                <button type="button" class="btn btn-outline-warning analyze-failures" data-id="RUN-1004" title="Analyze Failures" disabled><i class="fas fa-search"></i></button>
+                                                <button type="button" class="btn btn-outline-info view-report" data-id="RUN-1004" title="View Report" disabled><i class="fas fa-file-alt"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>RUN-1005</td>
+                                        <td>Registration Flow Tests</td>
+                                        <td><span class="badge bg-warning">In Progress</span></td>
+                                        <td><span class="badge bg-secondary">Manual</span></td>
+                                        <td>2025-05-09 09:00:00</td>
+                                        <td>--</td>
+                                        <td>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" style="width: 40%" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="text-success">2 </span>/<span class="text-danger"> 0</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary view-run-details" data-id="RUN-1005" title="View Details"><i class="fas fa-eye"></i></button>
+                                                <button type="button" class="btn btn-outline-warning analyze-failures" data-id="RUN-1005" title="Analyze Failures" disabled><i class="fas fa-search"></i></button>
+                                                <button type="button" class="btn btn-outline-info view-report" data-id="RUN-1005" title="View Report" disabled><i class="fas fa-file-alt"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination for Execution Runs Table -->
+                        <nav aria-label="Execution runs pagination" class="mt-3">
+                            <ul class="pagination justify-content-end">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                                </li>
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Real-time Execution Monitor (only visible when there are active runs) -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-spinner fa-spin me-2 text-warning"></i>Active Execution Monitor
+                        </h5>
+                        <div>
+                            <span class="badge bg-warning me-2">2 Runs in Progress</span>
+                            <button class="btn btn-sm btn-outline-secondary" id="collapseMonitorBtn" data-bs-toggle="collapse" data-bs-target="#activeMonitorContent" aria-expanded="true" aria-controls="activeMonitorContent">
+                                <i class="fas fa-chevron-up"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="collapse show" id="activeMonitorContent">
+                        <div class="card-body">
+                            <div class="active-execution-container">
+                                <!-- Active Execution 1 -->
+                                <div class="active-execution-item mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0">
+                                            <span class="badge bg-info me-2">RUN-1002</span>Checkout Process Tests
+                                        </h6>
+                                        <div>
+                                            <span class="text-muted">Started: 09:45:00</span>
+                                            <span class="text-muted ms-3">Duration: 15m 12s</span>
+                                            <button class="btn btn-sm btn-danger ms-3">Abort</button>
+                                        </div>
+                                    </div>
+                                    <div class="progress mb-2" style="height: 15px;">
+                                        <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" style="width: 60%" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100">
+                                            60% (6/10 tests)
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <div>
+                                            <span class="text-success me-3"><i class="fas fa-check-circle me-1"></i> 3 Passed</span>
+                                            <span class="text-danger me-3"><i class="fas fa-times-circle me-1"></i> 1 Failed</span>
+                                            <span class="text-secondary"><i class="fas fa-clock me-1"></i> 6 Pending</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted">Current Test: TC-1006 (Verify checkout process)</span>
+                                        </div>
+                                    </div>
+                                    <div class="execution-log bg-light p-2 rounded" style="height: 100px; overflow-y: auto;">
+                                        <div class="log-entry"><span class="text-muted small">09:45:00</span> <span class="badge bg-info me-1">INFO</span> Execution started for Checkout Process Tests</div>
+                                        <div class="log-entry"><span class="text-muted small">09:45:05</span> <span class="badge bg-info me-1">INFO</span> Running test TC-1003: Verify product added to cart</div>
+                                        <div class="log-entry"><span class="text-muted small">09:45:32</span> <span class="badge bg-success me-1">PASS</span> TC-1003 completed successfully</div>
+                                        <div class="log-entry"><span class="text-muted small">09:46:00</span> <span class="badge bg-info me-1">INFO</span> Running test TC-1004: Verify cart update quantity</div>
+                                        <div class="log-entry"><span class="text-muted small">09:46:28</span> <span class="badge bg-success me-1">PASS</span> TC-1004 completed successfully</div>
+                                        <div class="log-entry"><span class="text-muted small">09:47:01</span> <span class="badge bg-info me-1">INFO</span> Running test TC-1005: Verify remove item from cart</div>
+                                        <div class="log-entry"><span class="text-muted small">09:47:27</span> <span class="badge bg-success me-1">PASS</span> TC-1005 completed successfully</div>
+                                        <div class="log-entry"><span class="text-muted small">09:48:02</span> <span class="badge bg-info me-1">INFO</span> Running test TC-1006: Verify checkout process</div>
+                                        <div class="log-entry"><span class="text-muted small">09:52:18</span> <span class="badge bg-danger me-1">FAIL</span> TC-1006 failed - Timeout waiting for payment processing</div>
+                                        <div class="log-entry"><span class="text-muted small">09:52:22</span> <span class="badge bg-info me-1">INFO</span> Running test TC-1007: Verify payment processing</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Active Execution 2 -->
+                                <div class="active-execution-item">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0">
+                                            <span class="badge bg-secondary me-2">RUN-1005</span>Registration Flow Tests
+                                        </h6>
+                                        <div>
+                                            <span class="text-muted">Started: 09:00:00</span>
+                                            <span class="text-muted ms-3">Duration: 1h 00m 12s</span>
+                                            <button class="btn btn-sm btn-danger ms-3">Abort</button>
+                                        </div>
+                                    </div>
+                                    <div class="progress mb-2" style="height: 15px;">
+                                        <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" style="width: 40%" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100">
+                                            40% (2/5 tests)
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <div>
+                                            <span class="text-success me-3"><i class="fas fa-check-circle me-1"></i> 2 Passed</span>
+                                            <span class="text-danger me-3"><i class="fas fa-times-circle me-1"></i> 0 Failed</span>
+                                            <span class="text-secondary"><i class="fas fa-clock me-1"></i> 3 Pending</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted">Executing by: Jane Smith (Manual Tester)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>    
+
+<!-- Upload Manual Results Tab -->
+    <div class="tab-pane fade" id="upload-results" role="tabpanel" aria-labelledby="upload-results-tab">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Upload Manual Test Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadResultsForm">
+                            <!-- Test Run Selection -->
+                            <div class="mb-4">
+                                <label for="testRunID" class="form-label">Select Test Run</label>
+                                <select class="form-select" id="testRunID">
+                                    <option value="">Select a Test Run...</option>
+                                    <option value="RUN-1004">RUN-1004 - User Profile Tests (Scheduled)</option>
+                                    <option value="RUN-1005">RUN-1005 - Registration Flow Tests (In Progress)</option>
+                                </select>
+                                <div class="form-text">Select a manual test run to upload results for</div>
+                            </div>
+
+                            <!-- Run Details Preview -->
+                            <div class="run-details-preview mb-4" style="display: none;">
+                                <h6 class="mb-3">Test Run Details</h6>
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><strong>Run Name:</strong> <span id="preview-run-name">-</span></p>
+                                                <p class="mb-1"><strong>Status:</strong> <span id="preview-run-status">-</span></p>
+                                                <p class="mb-1"><strong>Assigned To:</strong> <span id="preview-run-assigned">-</span></p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p class="mb-1"><strong>Start Date:</strong> <span id="preview-run-start">-</span></p>
+                                                <p class="mb-1"><strong>Due Date:</strong> <span id="preview-run-due">-</span></p>
+                                                <p class="mb-1"><strong>Test Cases:</strong> <span id="preview-run-cases">-</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Upload Area -->
+                            <div class="mb-4">
+                                <label class="form-label">Upload Test Results</label>
+                                <div class="upload-area p-4 text-center border rounded bg-light">
+                                    <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-primary"></i>
+                                    <h6>Drag and drop files here</h6>
+                                    <p class="text-muted">or</p>
+                                    <div class="mb-3">
+                                        <input class="form-control" type="file" id="resultFiles" multiple>
+                                    </div>
+                                    <p class="small text-muted">Supported formats: Excel, PDF, CSV, Images (PNG, JPG)</p>
+                                </div>
+                                <div class="form-text">Upload test execution reports, screenshots, or any supporting documents</div>
+                            </div>
+
+                            <!-- Upload Summary -->
+                            <div class="upload-summary mb-4" style="display: none;">
+                                <h6 class="mb-2">Files to Upload</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>File Name</th>
+                                                <th>Type</th>
+                                                <th>Size</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="fileList">
+                                            <!-- Files will be added here via JavaScript -->
+                                            <tr>
+                                                <td>Test_Results_User_Profile.xlsx</td>
+                                                <td>Excel</td>
+                                                <td>245 KB</td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-file">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Screenshot_Profile_Edit.png</td>
+                                                <td>Image</td>
+                                                <td>1.2 MB</td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-file">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Result Summary -->
+                            <div class="mb-4">
+                                <label for="testSummary" class="form-label">Test Result Summary</label>
+                                <textarea class="form-control" id="testSummary" rows="3" placeholder="Enter a summary of the test execution results..."></textarea>
+                            </div>
+
+                            <!-- Test Result Status -->
+                            <div class="mb-4">
+                                <label class="form-label">Overall Result</label>
+                                <div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="testResult" id="resultPassed" value="passed">
+                                        <label class="form-check-label text-success" for="resultPassed">
+                                            <i class="fas fa-check-circle me-1"></i> Passed
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="testResult" id="resultPassed_WithIssues" value="passed_with_issues">
+                                        <label class="form-check-label text-warning" for="resultPassed_WithIssues">
+                                            <i class="fas fa-exclamation-circle me-1"></i> Passed with Issues
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="testResult" id="resultFailed" value="failed">
+                                        <label class="form-check-label text-danger" for="resultFailed">
+                                            <i class="fas fa-times-circle me-1"></i> Failed
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="testResult" id="resultBlocked" value="blocked">
+                                        <label class="form-check-label text-secondary" for="resultBlocked">
+                                            <i class="fas fa-ban me-1"></i> Blocked
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Issues Found (Conditionally Shown) -->
+                            <div class="issues-section mb-4" style="display: none;">
+                                <label class="form-label">Issues Found</label>
+                                <div class="issues-list">
+                                    <div class="issue-item mb-2">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" placeholder="Describe the issue...">
+                                            <select class="form-select" style="max-width: 140px;">
+                                                <option value="minor">Minor</option>
+                                                <option value="major">Major</option>
+                                                <option value="critical">Critical</option>
+                                            </select>
+                                            <button class="btn btn-outline-danger" type="button"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-issue-btn">
+                                    <i class="fas fa-plus me-1"></i> Add Another Issue
+                                </button>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-secondary me-2" id="cancelUploadBtn">Cancel</button>
+                                <button type="button" class="btn btn-primary" id="uploadToSharePointBtn">
+                                    <i class="fas fa-upload me-1"></i> Upload Results to SharePoint
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+<!-- MODALS -->
+
+<!-- View Run Details Modal -->
+<div class="modal fade" id="viewRunDetailsModal" tabindex="-1" aria-labelledby="viewRunDetailsModalLabel" aria-hidden="true">
+<div class="modal-dialog modal-xl">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="viewRunDetailsModalLabel">Test Run Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h6>Run Information</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <th style="width: 150px;">Run ID:</th>
+                                    <td id="modalRunId">RUN-1001</td>
+                                </tr>
+                                <tr>
+                                    <th>Name:</th>
+                                    <td id="modalRunName">Login Test Suite</td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td id="modalRunStatus"><span class="badge bg-success">Completed</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Type:</th>
+                                    <td id="modalRunType"><span class="badge bg-info">Automated</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Started By:</th>
+                                    <td id="modalRunUser">John Doe</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6>Execution Details</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <th style="width: 150px;">Start Time:</th>
+                                    <td id="modalRunStartTime">2025-05-09 09:30:00</td>
+                                </tr>
+                                <tr>
+                                    <th>End Time:</th>
+                                    <td id="modalRunEndTime">2025-05-09 09:35:12</td>
+                                </tr>
+                                <tr>
+                                    <th>Duration:</th>
+                                    <td id="modalRunDuration">5m 12s</td>
+                                </tr>
+                                <tr>
+                                    <th>Environment:</th>
+                                    <td id="modalRunEnvironment">Test</td>
+                                </tr>
+                                <tr>
+                                    <th>Controller File:</th>
+                                    <td id="modalRunController">/path/to/controller.xlsx</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <h6>Test Results Summary</h6>
+                    <div class="result-summary-cards">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="card bg-light">
+                                    <div class="card-body p-3 text-center">
+                                        <h3 class="mb-0" id="modalTotalTests">12</h3>
+                                        <div class="text-muted">Total Tests</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-success-subtle">
+                                    <div class="card-body p-3 text-center">
+                                        <h3 class="mb-0 text-success" id="modalPassedTests">12</h3>
+                                        <div class="text-muted">Passed</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-danger-subtle">
+                                    <div class="card-body p-3 text-center">
+                                        <h3 class="mb-0 text-danger" id="modalFailedTests">0</h3>
+                                        <div class="text-muted">Failed</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-warning-subtle">
+                                    <div class="card-body p-3 text-center">
+                                        <h3 class="mb-0 text-warning" id="modalSkippedTests">0</h3>
+                                        <div class="text-muted">Skipped</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <h6>Test Case Results</h6>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Test Case ID</th>
+                                    <th>Test Case Name</th>
+                                    <th>Status</th>
+                                    <th>Duration</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalTestCaseResults">
+                                <tr>
+                                    <td>TC-1001</td>
+                                    <td>Verify login with valid credentials</td>
+                                    <td><span class="badge bg-success">Passed</span></td>
+                                    <td>1.2s</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary view-test-details" data-id="TC-1001">View Details</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>TC-1002</td>
+                                    <td>Verify login with invalid credentials</td>
+                                    <td><span class="badge bg-success">Passed</span></td>
+                                    <td>0.8s</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary view-test-details" data-id="TC-1002">View Details</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" id="exportRunDetailsBtn">Export Results</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Analyze Failures Modal -->
+<div class="modal fade" id="analyzeFailuresModal" tabindex="-1" aria-labelledby="analyzeFailuresModalLabel" aria-hidden="true">
+<div class="modal-dialog modal-xl">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="analyzeFailuresModalLabel">Analyze Test Failures</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h6>Run Information</h6>
+                    <p class="mb-1"><strong>Run ID:</strong> <span id="analyzeFailuresRunId">RUN-1003</span></p>
+                    <p class="mb-1"><strong>Name:</strong> <span id="analyzeFailuresRunName">Payment Processing Tests</span></p>
+                    <p class="mb-1"><strong>Started:</strong> <span id="analyzeFailuresRunStarted">2025-05-09 08:30:00</span></p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Failure Summary</h6>
+                    <p class="mb-1"><strong>Failed Tests:</strong> <span id="analyzeFailuresCount" class="text-danger">3</span></p>
+                    <p class="mb-1"><strong>Common Patterns:</strong> <span id="analyzeFailuresPatterns">API Connection Timeout</span></p>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-robot me-2"></i>AI Analysis: The payment gateway API appears to be experiencing timeout issues, affecting all payment processing tests. This is likely due to network connectivity problems or the payment gateway service being temporarily unavailable.
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <h6>Failed Test Cases</h6>
+                    <div class="accordion" id="failedTestsAccordion">
+                        <!-- Failed Test Case 1 -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingTC1007">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTC1007" aria-expanded="true" aria-controls="collapseTC1007">
+                                    TC-1007: Verify payment processing - Credit Card
+                                </button>
+                            </h2>
+                            <div id="collapseTC1007" class="accordion-collapse collapse show" aria-labelledby="headingTC1007" data-bs-parent="#failedTestsAccordion">
+                                <div class="accordion-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>Failure Details</h6>
+                                            <p class="mb-2"><strong>Error Message:</strong> <span class="text-danger">Connection timeout after 30000ms</span></p>
+                                            <p class="mb-2"><strong>Failed Step:</strong> Submit payment information to gateway</p>
+                                            <p class="mb-2"><strong>Error Location:</strong> payment_processor.py, line 152</p>
+                                            <div class="code-snippet bg-light p-2 mb-3">
+                                                <pre><code>response = requests.post(payment_gateway_url, data=payload, timeout=30)
+# Connection timeout occurred here</code></pre>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>AI Analysis & Remediation</h6>
+                                            <div class="analysis-detail mb-3">
+                                                <p><strong>Root Cause:</strong> The payment gateway API endpoint is not responding within the expected timeout period.</p>
+                                                <p><strong>Potential Solutions:</strong></p>
+                                                <ol>
+                                                    <li>Increase the connection timeout value to accommodate potential network latency.</li>
+                                                    <li>Implement retry logic with exponential backoff.</li>
+                                                    <li>Verify payment gateway service health status.</li>
+                                                </ol>
+                                            </div>
+                                            <div class="code-suggestion bg-light p-2">
+                                                <pre><code># Recommended fix with retry logic
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+retry_strategy = Retry(
+total=3,
+backoff_factor=0.5,
+status_forcelist=[500, 502, 503, 504]
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+session = requests.Session()
+session.mount("https://", adapter)
+
+response = session.post(payment_gateway_url, data=payload, timeout=60)</code></pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 d-flex justify-content-end">
+                                        <button class="btn btn-sm btn-outline-primary me-2">View Full Test Log</button>
+                                        <button class="btn btn-sm btn-outline-success me-2">Apply Fix & Retry</button>
+                                        <button class="btn btn-sm btn-outline-warning">Create JIRA Defect</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Failed Test Case 2 -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingTC1008">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTC1008" aria-expanded="false" aria-controls="collapseTC1008">
+                                    TC-1008: Verify payment processing - PayPal
+                                </button>
+                            </h2>
+                            <div id="collapseTC1008" class="accordion-collapse collapse" aria-labelledby="headingTC1008" data-bs-parent="#failedTestsAccordion">
+                                <div class="accordion-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>Failure Details</h6>
+                                            <p class="mb-2"><strong>Error Message:</strong> <span class="text-danger">Connection timeout after 30000ms</span></p>
+                                            <p class="mb-2"><strong>Failed Step:</strong> Submit payment information to gateway</p>
+                                            <p class="mb-2"><strong>Error Location:</strong> payment_processor.py, line 152</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>AI Analysis & Remediation</h6>
+                                            <div class="analysis-detail mb-3">
+                                                <p><strong>Root Cause:</strong> Same issue as TC-1007. The payment gateway API endpoint is not responding within the expected timeout period.</p>
+                                                <p><strong>Recommendation:</strong> Apply the same fix as TC-1007.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 d-flex justify-content-end">
+                                        <button class="btn btn-sm btn-outline-primary me-2">View Full Test Log</button>
+                                        <button class="btn btn-sm btn-outline-success me-2">Apply Fix & Retry</button>
+                                        <button class="btn btn-sm btn-outline-warning">Create JIRA Defect</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Failed Test Case 3 -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingTC1010">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTC1010" aria-expanded="false" aria-controls="collapseTC1010">
+                                    TC-1010: Verify payment processing - Gift Card
+                                </button>
+                            </h2>
+                            <div id="collapseTC1010" class="accordion-collapse collapse" aria-labelledby="headingTC1010" data-bs-parent="#failedTestsAccordion">
+                                <div class="accordion-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>Failure Details</h6>
+                                            <p class="mb-2"><strong>Error Message:</strong> <span class="text-danger">Connection timeout after 30000ms</span></p>
+                                            <p class="mb-2"><strong>Failed Step:</strong> Submit payment information to gateway</p>
+                                            <p class="mb-2"><strong>Error Location:</strong> payment_processor.py, line 152</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>AI Analysis & Remediation</h6>
+                                            <div class="analysis-detail mb-3">
+                                                <p><strong>Root Cause:</strong> Same issue as TC-1007 and TC-1008. The payment gateway API endpoint is not responding within the expected timeout period.</p>
+                                                <p><strong>Recommendation:</strong> Apply the same fix as TC-1007.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 d-flex justify-content-end">
+                                        <button class="btn btn-sm btn-outline-primary me-2">View Full Test Log</button>
+                                        <button class="btn btn-sm btn-outline-success me-2">Apply Fix & Retry</button>
+                                        <button class="btn btn-sm btn-outline-warning">Create JIRA Defect</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6>Recommended Actions</h6>
+                    <div class="list-group">
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>1. Check Payment Gateway Status</strong>
+                                <p class="mb-0 small text-muted">Verify if the payment gateway service is operational</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary">Check Status</button>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>2. Implement Retry Logic</strong>
+                                <p class="mb-0 small text-muted">Apply recommended fix with retry mechanism</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary">Apply Fix</button>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>3. Create JIRA Defect</strong>
+                                <p class="mb-0 small text-muted">Log an issue for the development team</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary">Create Defect</button>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>4. Re-run Failed Tests</strong>
+                                <p class="mb-0 small text-muted">Re-execute only the failed test cases after fixes</p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary">Re-run Tests</button>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary">Apply All Recommendations</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- View Report Modal -->
+<div class="modal fade" id="viewReportModal" tabindex="-1" aria-labelledby="viewReportModalLabel" aria-hidden="true">
+<div class="modal-dialog modal-xl">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="viewReportModalLabel">Test Execution Report</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="report-header mb-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4 id="reportTitle">Login Test Suite</h4>
+                        <p class="text-muted mb-2">Run ID: <span id="reportRunId">RUN-1001</span></p>
+                        <p class="text-muted mb-2">Executed on: <span id="reportDate">May 9, 2025</span></p>
+                        <p class="text-muted mb-0">Executed by: <span id="reportUser">John Doe</span></p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <div class="report-status mb-3">
+                            <span class="badge bg-success p-2">PASSED</span>
+                        </div>
+                        <p class="text-muted mb-0">12 Test Cases Executed</p>
+                        <p class="text-muted mb-0">Duration: 5m 12s</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-charts mb-4">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Test Results</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-placeholder bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <div>
+                                        <i class="fas fa-chart-pie fa-3x text-primary mb-3"></i>
+                                        <p class="text-center mb-0">Pie Chart: Test Result Distribution</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Duration</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-placeholder bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <div>
+                                        <i class="fas fa-chart-bar fa-3x text-primary mb-3"></i>
+                                        <p class="text-center mb-0">Bar Chart: Test Case Duration</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Trend</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-placeholder bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <div>
+                                        <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                                        <p class="text-center mb-0">Line Chart: Test Execution Trends</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-summary mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Test Summary</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Metric</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Total Tests</td>
+                                        <td>12</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Passed</td>
+                                        <td class="text-success">12 (100%)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Failed</td>
+                                        <td class="text-danger">0 (0%)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Skipped</td>
+                                        <td class="text-warning">0 (0%)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Average Execution Time</td>
+                                        <td>26s per test</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Environment</td>
+                                        <td>Test</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Browser</td>
+                                        <td>Chrome 122.0.6261.112</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-details">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">Test Case Details</h6>
+                        <div>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" placeholder="Filter test cases...">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Test Case</th>
+                                        <th>Status</th>
+                                        <th>Duration</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>TC-1001</td>
+                                        <td>Verify login with valid credentials</td>
+                                        <td><span class="badge bg-success">Passed</span></td>
+                                        <td>1.2s</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#detailsTC1001" aria-expanded="false" aria-controls="detailsTC1001">
+                                                <i class="fas fa-chevron-down"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="collapse" id="detailsTC1001">
+                                        <td colspan="5" class="p-3 bg-light">
+                                            <h6>Test Steps</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>#</th>
+                                                            <th>Step</th>
+                                                            <th>Expected Result</th>
+                                                            <th>Actual Result</th>
+                                                            <th>Status</th>
+                                                            <th>Duration</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <td>1</td>
+                                                            <td>Navigate to login page</td>
+                                                            <td>Login page is displayed</td>
+                                                            <td>Login page displayed successfully</td>
+                                                            <td><span class="badge bg-success">Passed</span></td>
+                                                            <td>0.3s</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>2</td>
+                                                            <td>Enter valid username and password</td>
+                                                            <td>Credentials entered correctly</td>
+                                                            <td>Username and password entered</td>
+                                                            <td><span class="badge bg-success">Passed</span></td>
+                                                            <td>0.2s</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>3</td>
+                                                            <td>Click login button</td>
+                                                            <td>System processes login request</td>
+                                                            <td>Login request processed</td>
+                                                            <td><span class="badge bg-success">Passed</span></td>
+                                                            <td>0.4s</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>4</td>
+                                                            <td>Verify successful login</td>
+                                                            <td>Home page displayed with user info</td>
+                                                            <td>Home page displayed with correct user information</td>
+                                                            <td><span class="badge bg-success">Passed</span></td>
+                                                            <td>0.3s</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="mt-3">
+                                                <h6>Screenshots</h6>
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="card">
+                                                            <div class="card-body p-2">
+                                                                <div class="screenshot-placeholder bg-light d-flex align-items-center justify-content-center" style="height: 100px;">
+                                                                    <div>
+                                                                        <i class="fas fa-image text-primary"></i>
+                                                                        <small class="d-block">Login Page</small>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="card">
+                                                            <div class="card-body p-2">
+                                                                <div class="screenshot-placeholder bg-light d-flex align-items-center justify-content-center" style="height: 100px;">
+                                                                    <div>
+                                                                        <i class="fas fa-image text-primary"></i>
+                                                                        <small class="d-block">Credentials Entry</small>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="card">
+                                                            <div class="card-body p-2">
+                                                                <div class="screenshot-placeholder bg-light d-flex align-items-center justify-content-center" style="height: 100px;">
+                                                                    <div>
+                                                                        <i class="fas fa-image text-primary"></i>
+                                                                        <small class="d-block">Home Page After Login</small>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>TC-1002</td>
+                                        <td>Verify login with invalid credentials</td>
+                                        <td><span class="badge bg-success">Passed</span></td>
+                                        <td>0.8s</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#detailsTC1002" aria-expanded="false" aria-controls="detailsTC1002">
+                                                <i class="fas fa-chevron-down"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="collapse" id="detailsTC1002">
+                                        <td colspan="5" class="p-3 bg-light">
+                                            <h6>Test Steps</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>#</th>
+                                                            <th>Step</th>
+                                                            <th>Expected Result</th>
+                                                            <th>Actual Result</th>
+                                                            <th>Status</th>
+                                                            <th>Duration</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <td>1</td>
+                                                            <td>Navigate to login page</td>
+                                                            <td>Login page is displayed</td>
+                                                            <td>Login page displayed successfully</td>
+                                                            <td><span class="badge bg-success">Passed</span></td>
+                                                            <td>0.2s</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>2</td>
+                                                            <td>Enter invalid username and password</td>
+                                                            <td>Credentials entered correctly</td>
+                                                            <td>Invalid username and password entered</td>
+                                                            <td><span class="badge bg-success">Passed</span></td>
+                                                            <td>0.2s</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>3</td>
+                                                            <td>Click login button</td>
+                                                            <td>System processes login request</td>
+                                                            <td>Login request processed</td>
+                                                            <td><span class="badge bg-success">Passed</span></td>
+                                                            <td>0.2s</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>4</td>
+                                                            <td>Verify error message</td>
+                                                            <td>Error message displayed</td>
+                                                            <td>Error message "Invalid credentials" displayed</td>
+                                                            <td><span class="badge bg-success">Passed</span></td>
+                                                            <td>0.2s</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-primary dropdown-toggle" type="button" id="exportReportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Export Report
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="exportReportDropdown">
+                    <li><a class="dropdown-item" href="#"><i class="far fa-file-pdf me-2"></i>Export as PDF</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="far fa-file-excel me-2"></i>Export as Excel</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="far fa-file-word me-2"></i>Export as Word</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="far fa-file-code me-2"></i>Export as HTML</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Controller File Selection Modal -->
+<div class="modal fade" id="controllerFileModal" tabindex="-1" aria-labelledby="controllerFileModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="controllerFileModalLabel">Select Controller File</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <label for="controllerFileSelect" class="form-label">Available Controller Files</label>
+                <select class="form-select" id="controllerFileSelect">
+                    <option value="/path/to/controller.xlsx">controller.xlsx</option>
+                    <option value="/path/to/login_controller.xlsx">login_controller.xlsx</option>
+                    <option value="/path/to/payment_controller.xlsx">payment_controller.xlsx</option>
+                    <option value="/path/to/registration_controller.xlsx">registration_controller.xlsx</option>
+                </select>
+                <div class="form-text">Select an existing controller file or upload a new one</div>
+            </div>
+            <div class="mb-3">
+                <label for="controllerFileUpload" class="form-label">Upload New Controller File</label>
+                <input class="form-control" type="file" id="controllerFileUpload">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" id="selectControllerBtn">Select</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Driver Script Selection Modal -->
+<div class="modal fade" id="driverScriptModal" tabindex="-1" aria-labelledby="driverScriptModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="driverScriptModalLabel">Select Driver Script</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <label for="driverScriptSelect" class="form-label">Available Driver Scripts</label>
+                <select class="form-select" id="driverScriptSelect">
+                    <option value="/path/to/driver_script.py">driver_script.py</option>
+                    <option value="/path/to/login_driver.py">login_driver.py</option>
+                    <option value="/path/to/payment_driver.py">payment_driver.py</option>
+                    <option value="/path/to/registration_driver.py">registration_driver.py</option>
+                </select>
+                <div class="form-text">Select an existing driver script or upload a new one</div>
+            </div>
+            <div class="mb-3">
+                <label for="driverScriptUpload" class="form-label">Upload New Driver Script</label>
+                <input class="form-control" type="file" id="driverScriptUpload">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" id="selectDriverBtn">Select</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Execution Success Modal -->
+<div class="modal fade" id="executionSuccessModal" tabindex="-1" aria-labelledby="executionSuccessModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+            <h5 class="modal-title" id="executionSuccessModalLabel">Execution Started Successfully</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="text-center mb-4">
+                <i class="fas fa-check-circle text-success fa-5x mb-3"></i>
+                <h5>Test Execution Has Been Initiated</h5>
+            </div>
+            <div class="execution-details p-3 bg-light rounded">
+                <p class="mb-1"><strong>Run ID:</strong> <span id="successRunId">RUN-1006</span></p>
+                <p class="mb-1"><strong>Name:</strong> <span id="successRunName">Login and Payment Test Suite</span></p>
+                <p class="mb-1"><strong>Test Cases:</strong> <span id="successRunCases">7 test cases selected</span></p>
+                <p class="mb-0"><strong>Started At:</strong> <span id="successRunStartTime">2025-05-09 10:15:00</span></p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" id="viewExecutionDashboardBtn">View in Dashboard</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Upload Success Modal -->
+<div class="modal fade" id="uploadSuccessModal" tabindex="-1" aria-labelledby="uploadSuccessModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+            <h5 class="modal-title" id="uploadSuccessModalLabel">Results Uploaded Successfully</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="text-center mb-4">
+                <i class="fas fa-cloud-upload-alt text-success fa-5x mb-3"></i>
+                <h5>Test Results Have Been Uploaded to SharePoint</h5>
+            </div>
+            <div class="upload-details p-3 bg-light rounded">
+                <p class="mb-1"><strong>Run ID:</strong> <span id="uploadRunId">RUN-1005</span></p>
+                <p class="mb-1"><strong>SharePoint Location:</strong> <span id="uploadLocation">/Test Results/Manual Tests/2025/May/RUN-1005</span></p>
+                <p class="mb-1"><strong>Files Uploaded:</strong> <span id="uploadFileCount">3 files</span></p>
+                <p class="mb-0"><strong>Upload Time:</strong> <span id="uploadTime">2025-05-09 10:20:15</span></p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" id="viewSharePointBtn">View in SharePoint</button>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/test_execution/test_execution.js' %}"></script>
+{% endblock %}

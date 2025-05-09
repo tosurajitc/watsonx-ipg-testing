@@ -1,685 +1,542 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-Test Case Refiner Module for the Watsonx IPG Testing platform.
-
-This module analyzes existing test cases to suggest improvements, additional details,
-variations, and other refinements to enhance the robustness of the test coverage.
-"""
+# src/phase1/test_case_manager/llm_helper.py
 
 import os
-import pandas as pd
 import logging
 import json
-from typing import Dict, List, Any, Tuple, Optional, Union
+from typing import Dict, List, Any, Optional
+import requests
+import uuid
+from io import BytesIO
+import pandas as pd
 from datetime import datetime
-import re
-
+import traceback
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 # Import from src.common
-from src.common.utils.file_utils import read_file, write_file
 from src.common.logging.log_utils import setup_logger
 from src.common.exceptions.custom_exceptions import (
-    TestCaseNotFoundError,
-    TestCaseFormatError,
-    RefinementRuleError
+    LLMConnectionError,
+    LLMResponseError
 )
 
-# Setup logger
 logger = logging.getLogger(__name__)
 
-class TestCaseRefiner:
+class LLMHelper:
     """
-    Class to analyze and refine existing test cases to improve coverage and robustness.
+    Helper class to interact with LLM services for test case generation.
     """
     
-    # Define standard columns for test cases
-    TEST_CASE_COLUMNS = [
-        "SUBJECT", "TEST CASE", "TEST CASE NUMBER", "STEP NO", 
-        "TEST STEP DESCRIPTION", "DATA", "REFERENCE VALUES", "VALUES", 
-        "EXPECTED RESULT", "TRANS CODE", "TEST USER ID/ROLE", "STATUS", "TYPE"
-    ]
-    
-    # Define refinement indicators for various aspects of test cases
-    REFINEMENT_INDICATORS = {
-        "missing_data": ["DATA", "VALUES", "REFERENCE VALUES"],
-        "vague_steps": ["TEST STEP DESCRIPTION"],
-        "incomplete_results": ["EXPECTED RESULT"],
-        "missing_roles": ["TEST USER ID/ROLE"],
-        "transaction_code": ["TRANS CODE"]
-    }
-    
-    def __init__(self, refinement_rules_path: str = None):
+    def __init__(self, api_key: str = None, model: str = "llama"):
         """
-        Initialize the TestCaseRefiner with optional refinement rules.
+        Initialize the LLM helper.
         
         Args:
-            refinement_rules_path (str, optional): Path to the refinement rules JSON file.
+            api_key (str, optional): API key for LLM service. If None, uses env variable.
+            model (str, optional): Model to use. Default is llama.
         """
-        self.refinement_rules_path = refinement_rules_path
-        self.refinement_rules = {}
-        self.logger = logging.getLogger(__name__)
+        # Determine which API to use - GROQ by default, watsonx in production
+        self.use_watsonx = os.environ.get("USE_WATSONX", "False").lower() in ["true", "1", "yes"]
         
-        if refinement_rules_path and os.path.exists(refinement_rules_path):
-            self._load_refinement_rules()
+        # GROQ configuration (default)
+        self.groq_api_key = os.environ.get("GROQ_API_KEY")
+        self.groq_api_base = os.environ.get("GROQ_API_BASE", "https://api.groq.com/openai/v1")
+        self.groq_model = os.environ.get("GROQ_MODEL", "llama3-70b-8192")
         
-        self.logger.info(f"TestCaseRefiner initialized")
+        # watsonx.ai configuration
+        self.watsonx_api_key = os.environ.get("WATSONX_API_KEY")
+        self.watsonx_url = os.environ.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
+        self.watsonx_model = os.environ.get("WATSONX_MODEL", "ibm/granite-13b-chat-v2")
+        self.watsonx_project_id = os.environ.get("WATSONX_PROJECT_ID")
+        self.watsonx_space_id = os.environ.get("WATSONX_SPACE_ID")
+        
+        # Legacy compatibility
+        self.api_key = api_key or (self.watsonx_api_key if self.use_watsonx else self.groq_api_key)
+        self.model = model
+        
+        if self.use_watsonx and not self.watsonx_api_key:
+            logger.warning("No API key provided for watsonx.ai. LLM integration will not function.")
+        elif not self.use_watsonx and not self.groq_api_key:
+            logger.warning("No API key provided for GROQ. LLM integration will not function.")
     
-    def _load_refinement_rules(self):
+    def generate_test_case_structure(self, prompt: str) -> Dict[str, Any]:
         """
-        Load refinement rules from the JSON file.
-        
-        Raises:
-            RefinementRuleError: If the rules file cannot be loaded or is invalid.
-        """
-        try:
-            with open(self.refinement_rules_path, 'r') as f:
-                self.refinement_rules = json.load(f)
-            
-            self.logger.debug(f"Loaded refinement rules from {self.refinement_rules_path}")
-        except Exception as e:
-            self.logger.error(f"Failed to load refinement rules: {str(e)}")
-            raise RefinementRuleError(f"Failed to load refinement rules: {str(e)}")
-    
-    def load_test_case(self, file_path: str) -> pd.DataFrame:
-        """
-        Load a test case from an Excel or Word file.
+        Generate a test case structure from a simple prompt.
         
         Args:
-            file_path (str): Path to the test case file.
+            prompt (str): Simple prompt like "Generate login test cases for Admin user"
             
         Returns:
-            pd.DataFrame: The test case as a DataFrame.
+            Dict[str, Any]: Structured test case data
             
         Raises:
-            TestCaseNotFoundError: If the file doesn't exist.
-            TestCaseFormatError: If the file format is unsupported or invalid.
+            LLMConnectionError: If connection to LLM fails
+            LLMResponseError: If LLM response cannot be parsed
         """
-        if not os.path.exists(file_path):
-            error_msg = f"Test case file not found: {file_path}"
-            self.logger.error(error_msg)
-            raise TestCaseNotFoundError(error_msg)
-        
-        file_ext = os.path.splitext(file_path)[1].lower()
-        
         try:
-            if file_ext in ['.xlsx', '.xls']:
-                # Load Excel file
-                df = pd.read_excel(file_path)
-                
-                # Verify it has expected columns
-                if not all(col in df.columns for col in ["TEST CASE NUMBER", "TEST STEP DESCRIPTION"]):
-                    raise TestCaseFormatError(f"File does not appear to be a valid test case format: {file_path}")
-                
-                return df
-                
-            elif file_ext in ['.docx', '.doc']:
-                # For Word files, more complex processing would be needed
-                # This is a placeholder for actual Word document processing
-                # Would likely use a library like python-docx
-                
-                self.logger.warning("Word file processing is limited. Consider converting to Excel format.")
-                
-                # Simplified approach: Create a dataframe with basic structure
-                # In a real implementation, would parse the Word doc properly
-                return pd.DataFrame(columns=self.TEST_CASE_COLUMNS)
-                
+            # Create an enhanced prompt
+            enhanced_prompt = self._create_enhanced_prompt(prompt)
+            
+            # Call the appropriate LLM API based on configuration
+            if self.use_watsonx:
+                response = self._call_watsonx_api(enhanced_prompt)
             else:
-                raise TestCaseFormatError(f"Unsupported file format: {file_ext}")
-                
-        except TestCaseFormatError:
-            raise
+                response = self._call_groq_api(enhanced_prompt)
+            
+            # Parse and validate the response
+            test_case_data = self._parse_llm_response(response, prompt)
+            
+            return test_case_data
+        
+        except requests.RequestException as e:
+            logger.error(f"Failed to connect to LLM API: {str(e)}")
+            raise LLMConnectionError(f"Failed to connect to LLM API: {str(e)}")
+        
         except Exception as e:
-            error_msg = f"Failed to load test case file: {str(e)}"
-            self.logger.error(error_msg)
-            raise TestCaseFormatError(error_msg)
+            logger.error(f"Error generating test case structure: {str(e)}")
+            raise  # Re-raise the exception
     
-    def _validate_step_description(self, step_description: str) -> List[str]:
+    def _create_enhanced_prompt(self, user_prompt: str) -> str:
         """
-        Validate a test step description and suggest improvements.
-        
-        Args:
-            step_description (str): The test step description.
-            
-        Returns:
-            List[str]: List of suggested improvements.
+        Create an enhanced prompt that instructs the LLM to generate a structured test case.
         """
-        suggestions = []
-        
-        # Check for empty description
-        if not step_description or len(step_description.strip()) == 0:
-            suggestions.append("Step description is empty. Add a detailed description.")
-            return suggestions
-        
-        # Check for vague language
-        vague_terms = ["check", "verify", "ensure", "make sure", "do", "perform"]
-        for term in vague_terms:
-            if term in step_description.lower():
-                suggestions.append(f"Step uses vague term '{term}'. Consider using more specific actions.")
-        
-        # Check for missing action verbs
-        if not re.search(r"\b(click|enter|select|navigate|input|type|verify|validate|open|close|check|submit)\b", 
-                        step_description.lower()):
-            suggestions.append("Step may be missing a clear action verb. Include specific actions.")
-        
-        # Check for length/detail
-        if len(step_description.split()) < 3:
-            suggestions.append("Step description is too brief. Add more details.")
-        
-        # Apply any custom rules from refinement_rules if available
-        if "step_description_rules" in self.refinement_rules:
-            for rule in self.refinement_rules["step_description_rules"]:
-                # Apply pattern matching or other rule logic here
-                if "pattern" in rule and re.search(rule["pattern"], step_description, re.IGNORECASE):
-                    suggestions.append(rule.get("suggestion", "Consider revising this step."))
-        
-        return suggestions
-    
-    def _validate_expected_result(self, expected_result: str) -> List[str]:
+        return f"""
+        Generate a **comprehensive and detailed software test case** based on the user request: "{user_prompt}"
+
+        🔐 **CRITICAL REQUIREMENTS**:
+        1. Each test step **must include**:
+        - "TEST STEP DESCRIPTION": A clear, two-sentence minimum description of the action to be performed. Use the existing data as reference and enhance it without losing any information.
+        - "EXPECTED RESULT": A specific, observable, and verifiable outcome. It must directly correspond to the action in the TEST STEP DESCRIPTION.
+
+        2. **Do not leave the 'EXPECTED RESULT' field empty or vague** — it should clearly define what indicates success for each step.
+
+        📋 **Expected Output Format** (JSON):
+        {{
+            "SUBJECT": "Functional area/module under test (reuse the same value from input data)",
+            "TEST CASE": "Title or purpose of the test case (reuse the same as provided)",
+            "TEST CASE NUMBER": "Preserve the original test case ID",
+            "steps": [
+                {{
+                    "STEP NO": 1,
+                    "TEST STEP DESCRIPTION": "Enhanced and clear action description. Start from the original, and enrich it with technical detail or clarification, ensuring at least two meaningful sentences.",
+                    "DATA": "Input test data required for execution (if applicable)",
+                    "REFERENCE VALUES": "Any reference values tied to this step (optional, include if available)",
+                    "VALUES": "Expected values linked to the step (optional, include if available)",
+                    "EXPECTED RESULT": "Precisely what should be observed after executing the step. This must validate success/failure clearly.",
+                    "TRANS CODE": "Use the same transaction code from the input data",
+                    "TEST USER ID/ROLE": "User ID or role performing the step (retain original)",
+                    "STATUS": "Not Executed"
+                }},
+                // Continue for subsequent steps incrementing STEP NO
+            ],
+            "TYPE": "Type of test (Functional, Performance, Regression, etc. — use existing value)"
+        }}
+
+        🔍 **Guidelines for Step Generation**:
+        - The **TEST STEP DESCRIPTION** must be clear, action-oriented, and aligned with the original intent, but refined for completeness.
+        - The **EXPECTED RESULT** must be tightly coupled with the step description, specifying **what outcome qualifies as a success**.
+        - Populate **DATA**, **REFERENCE VALUES**, and **VALUES** based on available inputs. Leave blank only if information is genuinely unavailable.
+        - Ensure consistency, completeness, and traceability of each step.
+        - Provide a refined and complete test case for: "{user_prompt}"
+
+        ⚠️ **Mandatory**: Every test step **must** include a meaningful TEST STEP DESCRIPTION and a non-generic, verifiable EXPECTED RESULT.
         """
-        Validate an expected result and suggest improvements.
-        
-        Args:
-            expected_result (str): The expected result description.
-            
-        Returns:
-            List[str]: List of suggested improvements.
+
+# Add this at the beginning of the testcase_refiner.py file with the other imports
+
+
+    # Then replace the entire _call_groq_api function with this improved version:
+    def _call_groq_api(self, prompt: str) -> str:
         """
-        suggestions = []
-        
-        # Check for empty description
-        if not expected_result or len(expected_result.strip()) == 0:
-            suggestions.append("Expected result is empty. Add a detailed expected outcome.")
-            return suggestions
-        
-        # Check for vague language
-        vague_terms = ["works", "succeeds", "happens", "is done", "completed"]
-        for term in vague_terms:
-            if term in expected_result.lower():
-                suggestions.append(f"Expected result uses vague term '{term}'. Be more specific about the outcome.")
-        
-        # Check for verifiability
-        if not re.search(r"\b(displayed|shown|appears|contains|equals|is|should|must|will)\b", 
-                        expected_result.lower()):
-            suggestions.append("Expected result may not be clearly verifiable. Include specific verification criteria.")
-        
-        # Check for length/detail
-        if len(expected_result.split()) < 3:
-            suggestions.append("Expected result is too brief. Add more details about the outcome.")
-        
-        return suggestions
-    
-    def _validate_data_values(self, data: str, values: str, reference_values: str) -> List[str]:
+        Call the GROQ API with the prompt, using a session with retries and extended timeout.
         """
-        Validate data, values, and reference values for a test step.
+        if not self.groq_api_key:
+            raise LLMConnectionError("No API key available for GROQ. Please configure GROQ_API_KEY environment variable.")
         
-        Args:
-            data (str): The data field.
-            values (str): The values field.
-            reference_values (str): The reference values field.
-            
-        Returns:
-            List[str]: List of suggested improvements.
-        """
-        suggestions = []
+        # Create a session with retry capability
+        session = requests.Session()
         
-        # Check for empty fields
-        if not data or len(str(data).strip()) == 0:
-            suggestions.append("Data field is empty. Consider adding test data information.")
+        # Configure retry strategy with backoff
+        retry_strategy = Retry(
+            total=3,               # Try up to 3 times in total
+            backoff_factor=2,      # Wait 2, 4, 8 seconds between retries
+            status_forcelist=[429, 500, 502, 503, 504],  # Retry on these status codes
+            allowed_methods=["POST"]
+        )
         
-        if not values or len(str(values).strip()) == 0:
-            suggestions.append("Values field is empty. Consider adding specific test values.")
+        # Mount the adapter to the session
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("https://", adapter)
         
-        # Check for test data patterns
-        # For example, check if values appear to be test data placeholders
-        placeholder_pattern = r"\{\{.*?\}\}|\[.*?\]|<.*?>"
-        if isinstance(values, str) and re.search(placeholder_pattern, values):
-            suggestions.append("Values field contains placeholders. Replace with actual test values.")
-        
-        return suggestions
-    
-    def analyze_test_case(self, test_case_df: pd.DataFrame) -> Dict[str, Any]:
-        """
-        Analyze a test case and identify potential areas for refinement.
-        
-        Args:
-            test_case_df (pd.DataFrame): The test case DataFrame.
-            
-        Returns:
-            Dict[str, Any]: Analysis results with refinement suggestions.
-        """
-        analysis_results = {
-            "test_case_info": {},
-            "overall_assessment": {},
-            "step_suggestions": [],
-            "missing_test_variations": [],
-            "general_suggestions": []
+        headers = {
+            "Authorization": f"Bearer {self.groq_api_key}",
+            "Content-Type": "application/json"
         }
         
-        # Extract basic test case info
-        try:
-            # Get test case number and name (from the first row)
-            first_row = test_case_df.iloc[0] if len(test_case_df) > 0 else None
-            if first_row is not None:
-                analysis_results["test_case_info"] = {
-                    "test_case_number": first_row.get("TEST CASE NUMBER", "Unknown"),
-                    "test_case_name": first_row.get("TEST CASE", "Unknown"),
-                    "subject": first_row.get("SUBJECT", "Unknown"),
-                    "type": first_row.get("TYPE", "Unknown"),
-                    "total_steps": len(test_case_df)
-                }
-        except Exception as e:
-            self.logger.warning(f"Could not extract test case info: {str(e)}")
+        payload = {
+            "model": self.groq_model,
+            "messages": [
+                {"role": "system", "content": "You are a test case generation assistant. Generate detailed test cases in JSON format based on user prompts."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.2,
+            "max_tokens": 2000,
+            "response_format": {"type": "json_object"}
+        }
         
-        # Analyze each test step
-        for index, row in test_case_df.iterrows():
-            step_no = row.get("STEP NO", index + 1)
-            step_description = str(row.get("TEST STEP DESCRIPTION", ""))
-            expected_result = str(row.get("EXPECTED RESULT", ""))
-            data = row.get("DATA", "")
-            values = row.get("VALUES", "")
-            reference_values = row.get("REFERENCE VALUES", "")
+        try:
+            # Use the session with a very generous timeout
+            response = session.post(
+                f"{self.groq_api_base}/chat/completions", 
+                headers=headers, 
+                json=payload,
+                timeout=120  # 2 minutes timeout
+            )
             
-            step_suggestions = {
-                "step_no": step_no,
-                "suggestions": []
+            # Log the status code for debugging
+            logger.info(f"GROQ API response status code: {response.status_code}")
+            
+            response.raise_for_status()
+            
+            result = response.json()
+            if "choices" in result and len(result["choices"]) > 0:
+                content = result["choices"][0]["message"]["content"]
+                return content
+            else:
+                raise LLMConnectionError("GROQ API response did not contain expected 'choices' field")
+                
+        except Exception as e:
+            # Log the full exception for debugging
+            logger.error(f"GROQ API call failed: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise LLMConnectionError(f"Failed to connect to GROQ API: {str(e)}")
+    
+    def _call_watsonx_api(self, prompt: str) -> str:
+        """
+        Call the watsonx.ai API with the prompt.
+        
+        Args:
+            prompt (str): Enhanced prompt for the LLM
+            
+        Returns:
+            str: Response from the LLM
+            
+        Raises:
+            LLMConnectionError: If API call fails
+        """
+        if not self.watsonx_api_key:
+            raise LLMConnectionError("No API key available for watsonx.ai. Please configure WATSONX_API_KEY environment variable.")
+        
+        headers = {
+            "Authorization": f"Bearer {self.watsonx_api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        generation_url = f"{self.watsonx_url}/ml/v1/generation"
+        
+        payload = {
+            "model_id": self.watsonx_model,
+            "input": prompt,
+            "parameters": {
+                "decoding_method": "greedy",
+                "max_new_tokens": 2000,
+                "min_new_tokens": 100,
+                "temperature": 0.2,  # Lower temperature for more deterministic outputs
+                "stop_sequences": ["\n\n\n"]
+            }
+        }
+        
+        # Add project_id and space_id only if they exist
+        if self.watsonx_project_id:
+            payload["project_id"] = self.watsonx_project_id
+            
+        if self.watsonx_space_id:
+            payload["space_id"] = self.watsonx_space_id
+        
+        response = requests.post(generation_url, headers=headers, json=payload)
+        response.raise_for_status()
+        
+        result = response.json()
+        if "results" in result and len(result["results"]) > 0:
+            content = result["results"][0].get("generated_text", "")
+            return content
+        else:
+            raise LLMConnectionError("watsonx.ai API response did not contain expected 'results' field")
+    
+    def _parse_llm_response(self, response: str, original_prompt: str) -> Dict[str, Any]:
+        """
+        Parse and validate the LLM response.
+        
+        Args:
+            response (str): LLM response text
+            original_prompt (str): Original user prompt
+            
+        Returns:
+            Dict[str, Any]: Parsed test case data
+            
+        Raises:
+            LLMResponseError: If parsing fails
+        """
+        try:
+            # First try direct JSON loading (for GROQ with json_object mode)
+            try:
+                test_case_data = json.loads(response)
+            except json.JSONDecodeError:
+                # Extract JSON from response text (in case the LLM added extra text)
+                start_idx = response.find('{')
+                end_idx = response.rfind('}') + 1
+                
+                if start_idx == -1 or end_idx == 0:
+                    raise LLMResponseError("No valid JSON found in LLM response. The model failed to generate a structured test case.")
+                
+                json_str = response[start_idx:end_idx]
+                test_case_data = json.loads(json_str)
+            
+            # Validate the structure
+            required_fields = ["SUBJECT", "TEST CASE", "steps", "TYPE"]
+            missing_fields = [field for field in required_fields if field not in test_case_data]
+            if missing_fields:
+                raise LLMResponseError(f"LLM response missing required fields: {', '.join(missing_fields)}. Cannot generate a valid test case without these fields.")
+            
+            if not isinstance(test_case_data.get("steps"), list) or not test_case_data["steps"]:
+                raise LLMResponseError("Steps field must be a non-empty list. The LLM failed to generate any test steps.")
+            
+            # Add TEST CASE NUMBER if missing
+            if "TEST CASE NUMBER" not in test_case_data:
+                # Generate a TC-XXXXX style ID
+                test_case_data["TEST CASE NUMBER"] = f"TC-{uuid.uuid4().hex[:5].upper()}"
+            
+            # Validate each step
+            step_required_fields = [
+                "STEP NO", "TEST STEP DESCRIPTION", "DATA", 
+                "EXPECTED RESULT", "TEST USER ID/ROLE", "STATUS"
+            ]
+            
+            for i, step in enumerate(test_case_data["steps"]):
+                missing_step_fields = [field for field in step_required_fields if field not in step]
+                
+                # Only auto-add some fields if they're missing, for others we'll raise an error
+                if "STEP NO" not in step:
+                    step["STEP NO"] = i + 1
+                
+                if "STATUS" not in step:
+                    step["STATUS"] = "Not Executed"
+                
+                # Add empty strings for optional fields
+                for field in ["REFERENCE VALUES", "VALUES", "TRANS CODE"]:
+                    if field not in step:
+                        step[field] = ""
+                
+                # Remove these from the missing fields list
+                missing_step_fields = [f for f in missing_step_fields if f not in ["STEP NO", "STATUS", "REFERENCE VALUES", "VALUES", "TRANS CODE"]]
+                
+                if missing_step_fields:
+                    raise LLMResponseError(f"Step {i+1} is missing required fields: {', '.join(missing_step_fields)}. Cannot generate a valid test case without these fields.")
+            
+            return test_case_data
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse LLM response as JSON: {str(e)}")
+            raise LLMResponseError(f"Failed to parse LLM response as JSON: {str(e)}. The model did not generate valid JSON for test case creation.")
+        
+        except Exception as e:
+            logger.error(f"Error parsing LLM response: {str(e)}")
+            raise LLMResponseError(f"Error parsing LLM response: {str(e)}. Unable to generate a test case from the model output.")
+        
+        
+    def process_test_case_file(self, file_content, file_name=None):
+        """
+        Process a test case file and generate refinement suggestions.
+        
+        Args:
+            file_content (bytes): The content of the test case file
+            file_name (str, optional): The name of the file
+            
+        Returns:
+            dict: A dictionary with refinement suggestions and analysis results
+        """
+        try:
+            # Import needed libraries
+            from io import BytesIO
+            import pandas as pd
+            import numpy as np
+            from datetime import datetime
+            import uuid
+            import json
+            import logging
+            
+            logger = logging.getLogger(__name__)
+            logger.info("Starting test case file processing")
+            
+            # Create BytesIO and read DataFrame
+            file_io = BytesIO(file_content)
+            
+            # Read Excel with explicit NA values to catch #N/A and other Excel error values
+            test_case_df = pd.read_excel(
+                file_io, 
+                engine='openpyxl',
+                na_values=['#N/A', '#N/A N/A', '#NA', '-NaN', 'NaN', 'NA', 'NULL', 'null', 'NAN', 'nan', '-nan', 'None', 'none'],
+                keep_default_na=True
+            )
+            logger.info(f"Excel file read successfully with shape: {test_case_df.shape}")
+            
+            # COMPREHENSIVE NaN HANDLING: Replace all NaN, None, NA values with empty strings
+            test_case_df = test_case_df.replace({np.nan: "", None: "", "NaN": "", "NULL": "", "null": ""})
+            test_case_df = test_case_df.fillna("")  # Double insurance against NaN values
+            logger.info("NaN values replaced with empty strings")
+            
+            # Extract test case ID
+            test_case_id = None
+            if "TEST CASE NUMBER" in test_case_df.columns and not test_case_df["TEST CASE NUMBER"].iloc[0] == "":
+                test_case_id = str(test_case_df["TEST CASE NUMBER"].iloc[0])
+            else:
+                test_case_id = f"TC-{uuid.uuid4().hex[:8].upper()}"
+            logger.info(f"Test case ID: {test_case_id}")
+            
+            # Extract data from first row of DataFrame - with NaN protection
+            test_case_name = "Untitled Test Case"
+            subject = "Unknown"
+            test_user_role = "Unassigned"
+            test_type = "Functional"
+            
+            # Safe extraction with defaults
+            if len(test_case_df) > 0:
+                row = test_case_df.iloc[0]
+                test_case_name = str(row.get("TEST CASE", "")) or "Untitled Test Case"
+                subject = str(row.get("SUBJECT", "")) or "Unknown"
+                test_user_role = str(row.get("TEST USER ID/ROLE", "")) or "Unassigned"
+                test_type = str(row.get("TYPE", "")) or "Functional"
+            
+            # Prepare test case data for LLM
+            test_case_data = {
+                "format_version": "1.0",
+                "test_case_info": {
+                    "test_case_number": test_case_id,
+                    "test_case_name": test_case_name,
+                    "subject": subject,
+                    "type": test_type,
+                    "total_steps": len(test_case_df)
+                },
+                "steps": []
             }
             
-            # Validate step description
-            desc_suggestions = self._validate_step_description(step_description)
-            if desc_suggestions:
-                step_suggestions["suggestions"].extend([{
-                    "field": "TEST STEP DESCRIPTION", 
-                    "current_value": step_description,
-                    "suggestions": desc_suggestions
-                }])
+            # Process each row to create the steps data - with NaN protection
+            for idx, row in test_case_df.iterrows():
+                # Safe string conversion for all values with defaults
+                step = {
+                    "step_no": str(row.get("STEP NO", "") or idx + 1),
+                    "description": str(row.get("TEST STEP DESCRIPTION", "") or ""),
+                    "data": str(row.get("DATA", "") or ""),
+                    "expected_result": str(row.get("EXPECTED RESULT", "") or ""),
+                    "values": str(row.get("VALUES", "") or ""),
+                    "reference_values": str(row.get("REFERENCE VALUES", "") or "")
+                }
+                test_case_data["steps"].append(step)
             
-            # Validate expected result
-            result_suggestions = self._validate_expected_result(expected_result)
-            if result_suggestions:
-                step_suggestions["suggestions"].extend([{
-                    "field": "EXPECTED RESULT", 
-                    "current_value": expected_result,
-                    "suggestions": result_suggestions
-                }])
+            logger.info(f"Processed {len(test_case_data['steps'])} steps")
             
-            # Validate data values
-            data_suggestions = self._validate_data_values(data, values, reference_values)
-            if data_suggestions:
-                step_suggestions["suggestions"].extend([{
-                    "field": "DATA/VALUES", 
-                    "current_value": f"DATA: {data}, VALUES: {values}",
-                    "suggestions": data_suggestions
-                }])
+            # SPECIAL JSON SERIALIZATION TEST - early verification of JSON compatibility
+            try:
+                # Test JSON serialization before proceeding
+                json.dumps(test_case_data)
+                logger.info("Test case data successfully serialized to JSON")
+            except TypeError as json_error:
+                logger.error(f"JSON serialization error detected: {str(json_error)}")
+                # Find problematic fields and fix them
+                for step in test_case_data["steps"]:
+                    for field, value in step.items():
+                        if not isinstance(value, (str, int, float, bool, type(None), list, dict)):
+                            logger.warning(f"Problematic field detected: {field} = {value} of type {type(value)}")
+                            step[field] = str(value)  # Convert to string
+                # Try serialization again
+                json.dumps(test_case_data)
+                logger.info("JSON serialization issues fixed")
             
-            # Add to results if there are suggestions
-            if step_suggestions["suggestions"]:
-                analysis_results["step_suggestions"].append(step_suggestions)
-        
-        # Overall assessment
-        total_steps = len(test_case_df)
-        steps_with_issues = len(analysis_results["step_suggestions"])
-        
-        analysis_results["overall_assessment"] = {
-            "total_steps": total_steps,
-            "steps_with_issues": steps_with_issues,
-            "issue_percentage": (steps_with_issues / total_steps * 100) if total_steps > 0 else 0,
-            "completeness_score": self._calculate_completeness_score(test_case_df)
-        }
-        
-        # Check for missing test variations
-        analysis_results["missing_test_variations"] = self._suggest_test_variations(test_case_df)
-        
-        # Generate general suggestions
-        analysis_results["general_suggestions"] = self._generate_general_suggestions(test_case_df)
-        
-        return analysis_results
-    
-    def _calculate_completeness_score(self, test_case_df: pd.DataFrame) -> float:
-        """
-        Calculate a completeness score for the test case based on filled fields.
-        
-        Args:
-            test_case_df (pd.DataFrame): The test case DataFrame.
-            
-        Returns:
-            float: Completeness score (0-100).
-        """
-        # These are the key columns we want to check for completeness
-        key_columns = [
-            "TEST STEP DESCRIPTION", "EXPECTED RESULT", 
-            "DATA", "VALUES", "REFERENCE VALUES"
-        ]
-        
-        # Initialize counters
-        total_fields = len(test_case_df) * len(key_columns)
-        filled_fields = 0
-        
-        # Count filled fields
-        for col in key_columns:
-            if col in test_case_df.columns:
-                # Convert to string to handle non-string values
-                filled_fields += test_case_df[col].astype(str).str.strip().str.len().gt(0).sum()
-        
-        # Calculate score (0-100)
-        return (filled_fields / total_fields * 100) if total_fields > 0 else 0
-    
-    def _suggest_test_variations(self, test_case_df: pd.DataFrame) -> List[str]:
-        """
-        Suggest additional test variations that might be missing.
-        
-        Args:
-            test_case_df (pd.DataFrame): The test case DataFrame.
-            
-        Returns:
-            List[str]: Suggested test variations.
-        """
-        suggestions = []
-        
-        # Extract test case type and subject if available
-        test_type = test_case_df.iloc[0].get("TYPE", "") if len(test_case_df) > 0 else ""
-        subject = test_case_df.iloc[0].get("SUBJECT", "") if len(test_case_df) > 0 else ""
-        
-        # Look for negative test scenarios
-        has_negative_tests = False
-        for _, row in test_case_df.iterrows():
-            step_desc = str(row.get("TEST STEP DESCRIPTION", "")).lower()
-            expected = str(row.get("EXPECTED RESULT", "")).lower()
-            
-            # Look for negative test indicators
-            negative_indicators = ["invalid", "error", "fail", "negative", "incorrect"]
-            if any(ind in step_desc or ind in expected for ind in negative_indicators):
-                has_negative_tests = True
-                break
-        
-        if not has_negative_tests:
-            suggestions.append("Consider adding negative test scenarios (invalid inputs, error conditions)")
-        
-        # Look for boundary test cases
-        has_boundary_tests = False
-        for _, row in test_case_df.iterrows():
-            step_desc = str(row.get("TEST STEP DESCRIPTION", "")).lower()
-            values = str(row.get("VALUES", "")).lower()
-            
-            # Look for boundary test indicators
-            boundary_indicators = ["boundary", "limit", "max", "min", "maximum", "minimum"]
-            if any(ind in step_desc or ind in values for ind in boundary_indicators):
-                has_boundary_tests = True
-                break
-        
-        if not has_boundary_tests:
-            suggestions.append("Consider adding boundary test cases (min/max values, limits)")
-        
-        # Suggest variations based on test type
-        if "functional" in str(test_type).lower():
-            suggestions.append("Consider adding performance test scenarios if applicable")
-        
-        return suggestions
-    
-    def _generate_general_suggestions(self, test_case_df: pd.DataFrame) -> List[str]:
-        """
-        Generate general suggestions for improving the test case.
-        
-        Args:
-            test_case_df (pd.DataFrame): The test case DataFrame.
-            
-        Returns:
-            List[str]: General suggestions.
-        """
-        suggestions = []
-        
-        # Check test case structure
-        step_numbers = test_case_df.get("STEP NO", pd.Series(range(1, len(test_case_df) + 1)))
-        
-        # Check for step number sequence
-        expected_steps = list(range(1, len(test_case_df) + 1))
-        actual_steps = [int(s) if pd.notna(s) and str(s).isdigit() else 0 for s in step_numbers]
-        
-        if actual_steps != expected_steps:
-            suggestions.append("Step numbers are not in sequence. Consider renumbering steps.")
-        
-        # Check for consistency in structure
-        if len(test_case_df) > 0:
-            # Check for consistent test case number
-            tc_numbers = test_case_df["TEST CASE NUMBER"].unique()
-            if len(tc_numbers) > 1:
-                suggestions.append(f"Multiple test case numbers found ({len(tc_numbers)}). Ensure consistency.")
-            
-            # Check for consistent subject
-            subjects = test_case_df["SUBJECT"].unique()
-            if len(subjects) > 1:
-                suggestions.append(f"Multiple subjects found ({len(subjects)}). Ensure consistency.")
-        
-        # Check for test setup/teardown
-        first_step = test_case_df.iloc[0]["TEST STEP DESCRIPTION"].lower() if len(test_case_df) > 0 else ""
-        last_step = test_case_df.iloc[-1]["TEST STEP DESCRIPTION"].lower() if len(test_case_df) > 0 else ""
-        
-        setup_keywords = ["setup", "login", "initialize", "open", "navigate", "prepare"]
-        teardown_keywords = ["teardown", "logout", "cleanup", "close", "exit"]
-        
-        has_setup = any(keyword in first_step for keyword in setup_keywords)
-        has_teardown = any(keyword in last_step for keyword in teardown_keywords)
-        
-        if not has_setup:
-            suggestions.append("Consider adding setup steps at the beginning (login, initialization, etc.)")
-        
-        if not has_teardown:
-            suggestions.append("Consider adding teardown steps at the end (logout, cleanup, etc.)")
-        
-        return suggestions
-    
-    def suggest_refinements(self, test_case_path: str) -> Dict[str, Any]:
-        """
-        Analyze a test case file and suggest refinements.
-        
-        Args:
-            test_case_path (str): Path to the test case file.
-            
-        Returns:
-            Dict[str, Any]: Refinement suggestions.
-            
-        Raises:
-            TestCaseNotFoundError: If the file doesn't exist.
-            TestCaseFormatError: If the file format is invalid.
-        """
-        # Load the test case
-        test_case_df = self.load_test_case(test_case_path)
-        
-        # Analyze and generate suggestions
-        analysis_results = self.analyze_test_case(test_case_df)
-        
-        # Add file information
-        analysis_results["file_info"] = {
-            "file_path": test_case_path,
-            "file_name": os.path.basename(test_case_path),
-            "analysis_date": datetime.now().isoformat()
-        }
-        
-        return analysis_results
-    
-    def apply_refinements(self, test_case_path: str, refinements: Dict[str, Any], output_path: str = None) -> str:
-        """
-        Apply refinements to a test case and save the refined version.
-        
-        Args:
-            test_case_path (str): Path to the original test case file.
-            refinements (Dict[str, Any]): Refinement data to apply.
-            output_path (str, optional): Path to save the refined file. 
-                                       If None, uses original path with '_refined' suffix.
-            
-        Returns:
-            str: Path where the refined file was saved.
-            
-        Raises:
-            TestCaseNotFoundError: If the file doesn't exist.
-            TestCaseFormatError: If the file format is invalid.
-        """
-        # Load the test case
-        test_case_df = self.load_test_case(test_case_path)
-        
-        # Apply refinements if provided
-        if "step_refinements" in refinements:
-            for step_refinement in refinements["step_refinements"]:
-                step_no = step_refinement.get("step_no")
-                field_updates = step_refinement.get("updates", {})
-                
-                # Find the row with this step number
-                step_mask = test_case_df["STEP NO"] == step_no
-                if step_mask.any():
-                    # Update each field
-                    for field, value in field_updates.items():
-                        if field in test_case_df.columns:
-                            test_case_df.loc[step_mask, field] = value
-        
-        # Generate output path if not provided
-        if output_path is None:
-            file_name, file_ext = os.path.splitext(test_case_path)
-            output_path = f"{file_name}_refined{file_ext}"
-        
-        # Save the refined test case
-        file_ext = os.path.splitext(output_path)[1].lower()
-        
-        if file_ext in ['.xlsx', '.xls']:
-            # Create directory if it doesn't exist
-            os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-            
-            # Save to Excel
-            test_case_df.to_excel(output_path, index=False)
-            
-            self.logger.info(f"Refined test case saved to {output_path}")
-        else:
-            raise TestCaseFormatError(f"Unsupported output format: {file_ext}")
-        
-        return output_path
-    
-    def get_refinement_summary(self, analysis_results: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Generate a summary of the refinement suggestions.
-        
-        Args:
-            analysis_results (Dict[str, Any]): The analysis results.
-            
-        Returns:
-            Dict[str, Any]: Summary of refinement suggestions.
-        """
-        summary = {
-            "test_case_info": analysis_results.get("test_case_info", {}),
-            "overall_assessment": analysis_results.get("overall_assessment", {}),
-            "total_suggestions": 0,
-            "suggestion_categories": {},
-            "high_priority_suggestions": []
-        }
-        
-        # Count step suggestions by category
-        categories = {}
-        for step in analysis_results.get("step_suggestions", []):
-            for suggestion in step.get("suggestions", []):
-                field = suggestion.get("field", "Other")
-                
-                if field not in categories:
-                    categories[field] = 0
-                
-                categories[field] += len(suggestion.get("suggestions", []))
-                summary["total_suggestions"] += len(suggestion.get("suggestions", []))
-        
-        summary["suggestion_categories"] = categories
-        
-        # Add other suggestion counts
-        other_suggestions = len(analysis_results.get("missing_test_variations", [])) + \
-                          len(analysis_results.get("general_suggestions", []))
-        summary["total_suggestions"] += other_suggestions
-        
-        if "Other" not in categories:
-            categories["Other"] = 0
-        categories["Other"] += other_suggestions
-        
-        # Identify high priority suggestions
-        high_priority = []
-        
-        # Step suggestions with critical issues
-        for step in analysis_results.get("step_suggestions", []):
-            for suggestion in step.get("suggestions", []):
-                for detail in suggestion.get("suggestions", []):
-                    if any(term in detail.lower() for term in ["empty", "missing", "critical", "invalid"]):
-                        high_priority.append({
-                            "step_no": step.get("step_no"),
-                            "field": suggestion.get("field"),
-                            "issue": detail
-                        })
-        
-        # General suggestions with high importance
-        for suggestion in analysis_results.get("general_suggestions", []):
-            if any(term in suggestion.lower() for term in ["consistency", "sequence", "setup", "teardown"]):
-                high_priority.append({
-                    "step_no": "N/A",
-                    "field": "General",
-                    "issue": suggestion
-                })
-        
-        summary["high_priority_suggestions"] = high_priority
-        
-        return summary
+            # Create prompt for LLM
+            prompt = f"""
+            You are a test engineering expert. Your task is to refine and enhance the clarity and completeness of 
+            software test cases, particularly the fields TEST STEP DESCRIPTION and EXPECTED RESULT.
 
-# If running as a script
-if __name__ == "__main__":
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Analyze and refine test cases")
-    parser.add_argument("--test_case", required=True, help="Path to the test case file")
-    parser.add_argument("--rules", help="Path to refinement rules JSON file (optional)")
-    parser.add_argument("--output", help="Path to save the analysis results (optional)")
-    parser.add_argument("--apply", action="store_true", help="Apply suggested refinements")
-    parser.add_argument("--refined_output", help="Path to save the refined test case (required if --apply is set)")
-    
-    args = parser.parse_args()
-    
-    # Configure logging
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
-    # Create refiner
-    refiner = TestCaseRefiner(refinement_rules_path=args.rules)
-    
-    # Analyze test case
-    analysis_results = refiner.suggest_refinements(args.test_case)
-    
-    # Get summary
-    summary = refiner.get_refinement_summary(analysis_results)
-    
-    # Print summary
-    print("\nTest Case Refinement Summary:")
-    print(f"Test Case: {summary['test_case_info'].get('test_case_name', 'Unknown')}")
-    print(f"Test Case Number: {summary['test_case_info'].get('test_case_number', 'Unknown')}")
-    print(f"Total Steps: {summary['test_case_info'].get('total_steps', 0)}")
-    print(f"Completeness Score: {summary['overall_assessment'].get('completeness_score', 0):.1f}%")
-    print(f"Total Suggestions: {summary['total_suggestions']}")
-    
-    print("\nSuggestion Categories:")
-    for category, count in summary["suggestion_categories"].items():
-        print(f"  - {category}: {count}")
-    
-    print("\nHigh Priority Suggestions:")
-    for suggestion in summary["high_priority_suggestions"]:
-        print(f"  - Step {suggestion['step_no']} | {suggestion['field']}: {suggestion['issue']}")
-    
-    # Save analysis results if output path provided
-    if args.output:
-        os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-        with open(args.output, 'w') as f:
-            json.dump(analysis_results, f, indent=2)
-        print(f"\nDetailed analysis saved to: {args.output}")
-    
-    # Apply refinements if requested
-    if args.apply:
-        if not args.refined_output:
-            print("\nError: --refined_output is required when --apply is set")
-            exit(1)
-        
-        # In real application, would have UI for user to select which refinements to apply
-        # Here, we'll just simulate with a placeholder refinement structure
-        refinements = {
-            "step_refinements": []
-            # Would be populated from user selections
-        }
-        
-        refined_path = refiner.apply_refinements(args.test_case, refinements, args.refined_output)
-        print(f"\nRefined test case saved to: {refined_path}")
+            Please do not change the meaning or purpose of the test, but improve grammar, technical accuracy, logical sequence, 
+            and clarity. Use formal language appropriate for software QA documentation.
+                        
+            {test_case_data}
+            
+            """
+            
+            # Generate LLM response
+            try:
+                logger.info("Calling LLM to generate response")
+                llm_response = self.generate_test_case_structure(prompt)
+                logger.info("LLM response generated successfully")
+            except Exception as llm_error:
+                logger.error(f"LLM error: {str(llm_error)}")
+                
+                # Create fallback response
+                llm_response = None
+                logger.info("Using fallback response due to LLM error")
+            
+            # FINAL JSON SAFETY CHECK - ensure all values are JSON serializable
+            safe_original_test_case = []
+            for row in test_case_df.to_dict('records'):
+                safe_row = {}
+                for k, v in row.items():
+                    if pd.isna(v) or v is None:
+                        safe_row[k] = ""
+                    elif isinstance(v, (int, float)) and (np.isnan(v) if isinstance(v, float) else False):
+                        safe_row[k] = ""
+                    else:
+                        safe_row[k] = str(v) if not isinstance(v, (int, float, bool)) else v
+                safe_original_test_case.append(safe_row)
+            
+            # Return the complete analysis
+            result = {
+                "status": "success",
+                "message": "Test case successfully processed and refined",
+                "data": {
+                    "test_case_id": test_case_id,
+                    "test_case_info": {
+                        "test_case_number": test_case_id,
+                        "test_case_name": test_case_name,
+                        "subject": subject,
+                        "type": test_type,
+                        "total_steps": len(test_case_df)
+                    },
+                    "original_test_case": safe_original_test_case,
+                    "processed_data": test_case_data,
+                    "llm_response": llm_response
+                }
+            }
+            
+            # Final serialization test
+            try:
+                json.dumps(result)
+                logger.info("Final response successfully serialized to JSON")
+            except TypeError as json_error:
+                logger.error(f"Final JSON serialization error: {str(json_error)}")
+                
+                # Fallback to a minimal response
+                return {
+                    "status": "success",
+                    "message": "Test case processed with serialization issues",
+                    "data": {
+                        "test_case_id": test_case_id,
+                        "warning": "Some data was removed due to JSON serialization issues"
+                    }
+                }
+            
+            return result
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error processing test case file: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            
+            # Return error response
+            return {
+                "status": "error",
+                "message": f"Error processing test case file: {str(e)}",
+                "error_details": traceback.format_exc()
+            }   

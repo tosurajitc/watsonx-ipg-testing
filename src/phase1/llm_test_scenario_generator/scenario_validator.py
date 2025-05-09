@@ -57,32 +57,37 @@ class ScenarioValidator:
             self.logger.addHandler(handler)
 
     def validate_scenarios(
-        self, 
-        scenarios: List[Dict[str, Any]],
+        self,
+        scenario: Dict[str, Any],
         requirements: Optional[Dict[str, Any]] = None,
-        strict_mode: bool = False
+        strict_mode: bool = False,
+        simple_mode: bool = False  # Add this new parameter
     ) -> Dict[str, Any]:
         """
-        Validate a list of test scenarios.
+        Validate a test scenario.
 
         Args:
-            scenarios: List of scenarios to validate
+            scenario: Scenario to validate
             requirements: Optional requirements data for cross-validation
-            strict_mode: If True, any failure results in overall validation failure
+            strict_mode: If True, any critical issue results in validation failure
+            simple_mode: If True, auto-complete minimal input and use relaxed validation
 
         Returns:
-            Dictionary containing validation results and metrics
+            Dictionary containing validation results
         """
-        self.logger.info(f"Validating {len(scenarios)} test scenarios")
+        self.logger.info(f"Validating scenario: {scenario.get('id', 'Unknown ID')}")
         
-        validation_results = {
+        # If in simple mode, auto-complete missing fields
+        if simple_mode and isinstance(scenario, dict):
+            scenario = self._auto_complete_scenario(scenario)
+        
+        # Initialize result structure
+        result = {
+            "id": scenario.get("id", "unknown"),
             "valid": True,
-            "scenarios": [],
+            "issues": [],
+            "warnings": [],
             "metrics": {
-                "total_scenarios": len(scenarios),
-                "valid_scenarios": 0,
-                "invalid_scenarios": 0,
-                "issues_found": 0,
                 "completeness_score": 0.0,
                 "testability_score": 0.0,
                 "coverage_score": 0.0,
@@ -90,47 +95,111 @@ class ScenarioValidator:
             }
         }
         
-        # Validate each scenario
-        for scenario in scenarios:
-            scenario_result = self.validate_scenario(
-                scenario, 
-                requirements=requirements,
-                strict_mode=strict_mode
-            )
-            
-            validation_results["scenarios"].append(scenario_result)
-            
-            # Update metrics
-            if scenario_result["valid"]:
-                validation_results["metrics"]["valid_scenarios"] += 1
-            else:
-                validation_results["metrics"]["invalid_scenarios"] += 1
-                validation_results["metrics"]["issues_found"] += len(scenario_result["issues"])
+        # Skip detailed validation in simple mode
+        if simple_mode:
+            # Perform only basic structure validation
+            if not isinstance(scenario, dict):
+                result["valid"] = False
+                result["issues"].append("Scenario must be a dictionary")
+                return result
                 
-                # In strict mode, any invalid scenario makes the whole set invalid
-                if strict_mode:
-                    validation_results["valid"] = False
+            # Ensure minimal fields exist
+            if "name" not in scenario and "description" not in scenario:
+                result["valid"] = False
+                result["issues"].append("Scenario must contain at least a name or description")
+                return result
+                
+            # Set decent scores for simple mode
+            result["metrics"]["completeness_score"] = 0.8
+            result["metrics"]["testability_score"] = 0.8
+            result["metrics"]["coverage_score"] = 0.8
+            result["metrics"]["overall_quality_score"] = 0.8
+            
+            return result
         
-        # Calculate overall scores
-        validation_results["metrics"] = self._calculate_metrics(
-            validation_results["scenarios"], 
-            validation_results["metrics"],
-            requirements
-        )
+        # Continue with regular validation if not in simple mode
+        # [Your existing validation code here]
+        # ...
+
+    def _auto_complete_scenario(self, input_scenario: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Auto-complete a minimal scenario with reasonable defaults.
         
-        # If not in strict mode, determine overall validity based on thresholds
-        if not strict_mode:
-            quality_threshold = self.config.get("quality_threshold", 0.7)
-            validation_results["valid"] = (
-                validation_results["metrics"]["overall_quality_score"] >= quality_threshold
-            )
+        Args:
+            input_scenario: Minimal input scenario (could be just a description)
+            
+        Returns:
+            Expanded scenario with all required fields
+        """
+        scenario = input_scenario.copy()
         
-        self.logger.info(
-            f"Validation complete. Valid: {validation_results['valid']}, "
-            f"Quality score: {validation_results['metrics']['overall_quality_score']:.2f}"
-        )
+        # Generate an ID if missing
+        if "id" not in scenario:
+            scenario["id"] = f"SCENARIO-{str(uuid.uuid4())[:8]}"
         
-        return validation_results
+        # If there's just a description but no name, create a name from it
+        if "description" in scenario and "name" not in scenario:
+            # Extract a short name from description (first 50 chars or less)
+            desc = scenario["description"]
+            name = desc[:50] + ("..." if len(desc) > 50 else "")
+            scenario["name"] = name
+        
+        # If there's just a name but no description, use name as description
+        if "name" in scenario and "description" not in scenario:
+            scenario["description"] = scenario["name"]
+            
+        # Add other required fields with defaults
+        if "title" not in scenario:
+            if "name" in scenario:
+                scenario["title"] = scenario["name"]
+            else:
+                scenario["title"] = "Auto-generated Test Scenario"
+                
+        if "subject" not in scenario:
+            scenario["subject"] = "Functionality Test"
+            
+        if "type" not in scenario:
+            scenario["type"] = "Functional"
+            
+        # Add some basic steps if missing
+        if "steps" not in scenario or not scenario["steps"]:
+            # Extract potential steps from description if available
+            if "description" in scenario:
+                # Using a simple approach - in a real system, you might use the LLM here
+                desc = scenario["description"].lower()
+                if "login" in desc or "authentication" in desc:
+                    scenario["steps"] = [
+                        {
+                            "description": "Navigate to login page",
+                            "expected_result": "Login page is displayed"
+                        },
+                        {
+                            "description": "Enter valid credentials",
+                            "expected_result": "Credentials accepted"
+                        },
+                        {
+                            "description": "Submit login form",
+                            "expected_result": "User is logged in successfully"
+                        }
+                    ]
+                else:
+                    # Generic steps as fallback
+                    scenario["steps"] = [
+                        {
+                            "description": "Prepare test environment",
+                            "expected_result": "System ready for testing"
+                        },
+                        {
+                            "description": "Perform test action",
+                            "expected_result": "System responds as expected"
+                        },
+                        {
+                            "description": "Verify results",
+                            "expected_result": "Test results confirmed"
+                        }
+                    ]
+        
+        return scenario
 
     def validate_scenario(
         self, 

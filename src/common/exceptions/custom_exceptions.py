@@ -329,6 +329,15 @@ class ExecutionError(WatsonxIPGError):
     def __init__(self, message="Test execution operation failed"):
         super().__init__(message)
 
+# Add to src/common/exceptions/custom_exceptions.py
+class LLMConnectionError(Exception):
+    """Exception raised when there's an error connecting to the LLM API."""
+    pass
+
+class LLMResponseError(Exception):
+    """Exception raised when there's an error parsing the LLM response."""
+    pass
+
 
 class TestExecutionFailedError(ExecutionError):
     """Raised when a test execution fails."""

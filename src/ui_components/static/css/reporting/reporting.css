@@ -1,0 +1,383 @@
+/* Reporting Module CSS */
+
+/* Card Styling */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    padding: 0.75rem 1rem;
+}
+
+.card-title {
+    margin-bottom: 0;
+    color: #495057;
+    font-weight: 600;
+}
+
+/* Connection Status Indicator */
+.connection-status .badge {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+}
+
+#connectionStatus.bg-success {
+    background-color: #28a745 !important;
+}
+
+#connectionStatus.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+#connectionStatus.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+#refreshConnection {
+    transition: transform 0.3s ease;
+}
+
+#refreshConnection:hover {
+    transform: rotate(180deg);
+}
+
+/* Progress Bar Styling */
+.progress {
+    height: 0.75rem;
+    border-radius: 0.25rem;
+    background-color: #e9ecef;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    background-color: #0d6efd;
+}
+
+/* Status Log Container */
+.status-log-container {
+    margin-top: 1rem;
+}
+
+.status-log {
+    height: 150px;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.log-entry {
+    padding: 0.25rem 0;
+    border-bottom: 1px dashed #e9ecef;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-entry .timestamp {
+    color: #6c757d;
+    margin-right: 0.75rem;
+    font-weight: 500;
+}
+
+.log-entry .log-message {
+    color: #212529;
+}
+
+.log-entry .log-message.error {
+    color: #dc3545;
+}
+
+.log-entry .log-message.warning {
+    color: #ffc107;
+}
+
+.log-entry .log-message.success {
+    color: #198754;
+}
+
+/* Completion Actions */
+.completion-actions {
+    padding: 1rem;
+    border-radius: 0.25rem;
+}
+
+.completion-actions .alert {
+    margin-bottom: 1rem;
+}
+
+.completion-actions .btn {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Filter Controls */
+.form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.375rem;
+}
+
+.form-select, 
+.form-control {
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid #ced4da;
+}
+
+.form-select:focus,
+.form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+#customDateRange {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid #dee2e6;
+}
+
+/* Report Table Styles */
+.table-responsive {
+    margin-bottom: 1rem;
+}
+
+.table {
+    width: 100%;
+    margin-bottom: 1rem;
+    color: #212529;
+    vertical-align: middle;
+}
+
+.table thead th {
+    font-weight: 600;
+    border-top: 0;
+    vertical-align: bottom;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    padding: 0.75rem;
+}
+
+.table tbody td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border-top: 1px solid #dee2e6;
+}
+
+.sort-link {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.sort-link:hover {
+    color: #0d6efd;
+}
+
+.sort-link i {
+    font-size: 0.75rem;
+    margin-left: 0.25rem;
+}
+
+.sort-link.asc i:before {
+    content: "\f0de"; /* Font Awesome sort ascending icon */
+}
+
+.sort-link.desc i:before {
+    content: "\f0dd"; /* Font Awesome sort descending icon */
+}
+
+/* Badge Styling */
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    border-radius: 0.25rem;
+}
+
+.badge.bg-primary {
+    background-color: #0d6efd !important;
+}
+
+.badge.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529;
+}
+
+.badge.bg-success {
+    background-color: #198754 !important;
+}
+
+/* Action Buttons */
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.2rem;
+}
+
+/* Pagination Styling */
+.pagination {
+    margin-top: 1rem;
+    margin-bottom: 0;
+}
+
+.page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.page-link {
+    color: #0d6efd;
+}
+
+.page-link:hover {
+    color: #0a58ca;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+/* Modal Styling */
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+.modal-title {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Report Modal Specific Styles */
+.report-summary {
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.summary-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+.summary-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.summary-value.text-success {
+    color: #198754;
+}
+
+.summary-value.text-danger {
+    color: #dc3545;
+}
+
+.summary-value.text-warning {
+    color: #ffc107;
+}
+
+.summary-value.text-info {
+    color: #0dcaf0;
+}
+
+/* Chart Container Styling */
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+
+.placeholder-chart {
+    height: 100%;
+    background-color: #f8f9fa;
+    border: 1px dashed #dee2e6;
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.placeholder-chart:after {
+    content: "Chart will appear here";
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Tab Styling */
+.nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.nav-tabs .nav-link {
+    margin-bottom: -1px;
+    border: 1px solid transparent;
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+    color: #495057;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+    border-color: #e9ecef #e9ecef #dee2e6;
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+    color: #495057;
+    background-color: #fff;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .summary-item {
+        margin-bottom: 1rem;
+    }
+    
+    .action-buttons .btn {
+        margin-bottom: 0.5rem;
+        display: block;
+        width: 100%;
+    }
+    
+    .btn-group-sm {
+        display: flex;
+        width: 100%;
+    }
+    
+    .btn-group-sm .btn {
+        flex: 1;
+    }
+}

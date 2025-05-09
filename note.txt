@@ -30,3 +30,9 @@ git stash pop           #Once the pull is complete, reapply your local changes
 
 
 To run : python manage.py runserver                        
+
+https://supabase.com/ - 
+Project Name: watsonx_ipg_testing
+Table name: test_cases
+Database PW: IpgTesting2025#
+API Token: sbp_4ba50ef1f9946e6d09c4b54be2ab520fcdf908b5
