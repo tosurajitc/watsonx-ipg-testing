@@ -3,7 +3,7 @@ from typing import Dict, List
 import requests
 
 class DocumentUploader:
-    def upload_files_to_sharepoint(
+    def upload_files(
     files: List[str],
     site_url: str,
     folder_path: str,

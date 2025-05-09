@@ -38,7 +38,9 @@ def upload():
         site_url = request.form['site_url']
         folder_path = request.form['folder_path']
 
-        result = DocumentUploader().upload(file, site_url, folder_path, token)
+        #Need to check the size of the document and if document size is more than 10 MB, 
+        #upload using chunked method.
+        result = DocumentUploader().upload_files(file, site_url, folder_path, token)
         return jsonify(result), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -53,7 +55,7 @@ def download():
         site_url = request.args.get('site_url')
         file_url = request.args.get('file_url')
 
-        results = DocumentRetriever().download(site_url, file_url, token)
+        results = DocumentRetriever().download_files(site_url, file_url, token)
 
         if isinstance(results, dict) and results.get("error"):
             return jsonify(results), 400
