@@ -155,7 +155,7 @@ class TestCaseGenerator:
                     "TEST CASE NUMBER": test_case_number,
                     "STEP NO": step_idx,
                     "TEST STEP DESCRIPTION": step.get('description', ''),
-                    "DATA": step.get('data', ''),
+                    "DATA": step.get('data', 'N/A'),
                     "REFERENCE VALUES": step.get('reference_values', ''),
                     "VALUES": step.get('values', ''),
                     "EXPECTED RESULT": step.get('expected_result', ''),

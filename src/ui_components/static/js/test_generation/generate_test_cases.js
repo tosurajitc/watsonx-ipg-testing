@@ -560,6 +560,44 @@ TestGeneration.Generate = (function() {
             // Store the generated test case data
             generatedTestCaseData = response.data;
             
+            // Add console logs to see the data structure
+            console.log("Response from API:", response);
+            console.log("Response data type:", typeof response.data);
+            console.log("Response data:", response.data);
+            
+            // Adapt data format if needed
+            let displayData = response.data;
+            
+            // Check if data is missing the expected test_case property
+            if (displayData && !displayData.test_case) {
+                console.log("Data missing test_case property, adapting format");
+                
+                // If data is directly an array, wrap it in an object with test_case property
+                if (Array.isArray(displayData)) {
+                    displayData = { test_case: displayData };
+                    console.log("Adapted array data to:", displayData);
+                } 
+                // If data has a property that contains the test cases
+                else if (typeof displayData === 'object') {
+                    // Look for likely candidate properties that might contain test cases
+                    const candidateProps = ['results', 'test_cases', 'cases', 'data', 'steps'];
+                    
+                    for (const prop of candidateProps) {
+                        if (displayData[prop] && Array.isArray(displayData[prop])) {
+                            displayData = { test_case: displayData[prop] };
+                            console.log(`Found test case data in '${prop}' property, adapted to:`, displayData);
+                            break;
+                        }
+                    }
+                    
+                    // If we still don't have test_case, create an empty one to avoid errors
+                    if (!displayData.test_case) {
+                        console.warn("Could not find test case data in response, creating empty array");
+                        displayData = { test_case: [] };
+                    }
+                }
+            }
+            
             // Display test cases using the TestCaseDisplay module
             if (TestGeneration.TestCaseDisplay && elements.testCasePreview) {
                 // Show output area
@@ -568,11 +606,36 @@ TestGeneration.Generate = (function() {
                 }
                 elements.outputArea.style.display = 'block';
                 
-                // Display the test case
-                TestGeneration.TestCaseDisplay.displayTestCase(response.data, elements.testCasePreview);
+                console.log("Calling displayTestCase with data:", displayData);
+                
+                // Display the test case using adapted data
+                TestGeneration.TestCaseDisplay.displayTestCase(displayData, elements.testCasePreview);
+                
+                // Debug check if anything was added to the preview container
+                console.log("Content after displayTestCase:", elements.testCasePreview.innerHTML);
+                
+                // Also check for any CSS issues that might be hiding the content
+                const computedStyle = window.getComputedStyle(elements.outputArea);
+                console.log("Output area display style:", computedStyle.display);
+                console.log("Output area visibility:", computedStyle.visibility);
+                console.log("Output area opacity:", computedStyle.opacity);
             } else {
-                console.error('TestCaseDisplay module not available');
-                elements.testCasePreview.innerHTML = '<div class="alert alert-warning">Test case display module not available.</div>';
+                console.error('Display modules not available:', { 
+                    TestCaseDisplay: !!TestGeneration.TestCaseDisplay,
+                    testCasePreview: !!elements.testCasePreview
+                });
+                
+                // Try to get the preview element directly
+                const previewElement = document.getElementById('testCasePreview');
+                console.log("Direct DOM query for testCasePreview:", previewElement);
+                
+                if (previewElement) {
+                    previewElement.innerHTML = '<div class="alert alert-warning">Test case display module not available, but preview element found.</div>';
+                } else if (elements.testCasePreview) {
+                    elements.testCasePreview.innerHTML = '<div class="alert alert-warning">Test case display module not available.</div>';
+                } else {
+                    console.error('Cannot find testCasePreview element to display error message');
+                }
             }
             
             // Reset changes flag

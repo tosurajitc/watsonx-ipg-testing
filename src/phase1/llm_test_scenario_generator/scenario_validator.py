@@ -132,6 +132,13 @@ class ScenarioValidator:
             Expanded scenario with all required fields
         """
         scenario = input_scenario.copy()
+
+        if "steps" in scenario and scenario["steps"]:
+            for step in scenario["steps"]:
+                if isinstance(step, dict) and "DATA" not in step:
+                    # Auto-complete with a default DATA value
+                    step["DATA"] = "No specific test data required"
+        
         
         # Generate an ID if missing
         if "id" not in scenario:
