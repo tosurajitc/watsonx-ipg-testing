@@ -217,12 +217,19 @@ TestGeneration.API = (function() {
         // Get CSRF token
         const csrfToken = TestGeneration.UIUtils ? TestGeneration.UIUtils.getCSRFToken() : '';
         
+        // Fix for absolute paths - this ensures URLs with leading slash work correctly
+        const requestUrl = url.startsWith('/') ? 
+            window.location.origin + url : BASE_URL + url;
+        
+        console.log('Making download request to URL:', requestUrl);
+        
         // Check if browser supports Fetch API with download progress
         if (progressCallback && 'ReadableStream' in window) {
-            return fetch(BASE_URL + url, {
+            return fetch(requestUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': '*/*',  // Accept any content type
                     'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify(data),
@@ -231,9 +238,32 @@ TestGeneration.API = (function() {
             .then(response => {
                 if (!response.ok) {
                     return response.text().then(text => {
-                        throw new Error(`Server error (${response.status}): ${text}`);
+                        let errorMessage = `Server error (${response.status})`;
+                        try {
+                            // Try to parse as JSON for better error messages
+                            const errorData = JSON.parse(text);
+                            if (errorData.message) {
+                                errorMessage += `: ${errorData.message}`;
+                            } else if (errorData.error) {
+                                errorMessage += `: ${errorData.error}`;
+                            }
+                        } catch (e) {
+                            // Use the text as is if not JSON
+                            if (text) {
+                                errorMessage += `: ${text}`;
+                            }
+                        }
+                        throw new Error(errorMessage);
                     });
                 }
+                
+                // Log response headers for debugging
+                console.log('Response headers received:', 
+                    [...response.headers.entries()].reduce((obj, [key, val]) => {
+                        obj[key] = val;
+                        return obj;
+                    }, {})
+                );
                 
                 // Get content length if available
                 const contentLength = response.headers.get('Content-Length');
@@ -242,86 +272,208 @@ TestGeneration.API = (function() {
                 // Get filename from Content-Disposition header if available
                 const contentDisposition = response.headers.get('Content-Disposition');
                 if (contentDisposition) {
-                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"|filename=([^;]+)/);
                     if (filenameMatch) {
-                        filename = filenameMatch[1];
+                        filename = filenameMatch[1] || filenameMatch[2];
+                        console.log('Using filename from Content-Disposition:', filename);
                     }
                 }
                 
-                // Create a reader for the response body stream
-                const reader = response.body.getReader();
-                const chunks = [];
+                // Ensure we have a valid filename
+                if (!filename || filename.trim() === '') {
+                    filename = 'download-' + new Date().toISOString().substring(0, 10);
+                    console.log('Using default filename:', filename);
+                }
                 
-                // Process the stream
-                return new Promise((resolve, reject) => {
-                    function processStream() {
-                        reader.read().then(({done, value}) => {
-                            if (done) {
-                                // Combine chunks into a single Blob
-                                const blob = new Blob(chunks);
-                                
-                                // Create a download link
-                                const url = window.URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.style.display = 'none';
-                                a.href = url;
-                                a.download = filename || 'download';
-                                document.body.appendChild(a);
-                                a.click();
-                                
-                                // Clean up
-                                setTimeout(() => {
-                                    document.body.removeChild(a);
-                                    window.URL.revokeObjectURL(url);
-                                }, 100);
-                                
-                                // Resolve the promise
-                                resolve();
-                                return;
-                            }
-                            
-                            // Store the chunk
-                            chunks.push(value);
-                            
-                            // Update progress
-                            if (progressCallback && contentLength) {
-                                loaded += value.length;
-                                const percentComplete = (loaded / parseInt(contentLength, 10)) * 100;
-                                progressCallback(percentComplete);
-                            }
-                            
-                            // Continue processing
-                            processStream();
-                        }).catch(reject);
+                // Check if response body is readable stream
+                if (response.body) {
+                    console.log('Response body is available as stream');
+                    
+                    // Create a reader for the response body stream
+                    const reader = response.body.getReader();
+                    const chunks = [];
+                    
+                    if (progressCallback) {
+                        progressCallback(0); // Initialize progress at 0%
                     }
                     
-                    processStream();
-                });
-            })
-            .catch(handleError);
-        } else {
-            // Fall back to regular post with blob response for browsers without stream support
-            return post(url, data, true)
-                .then(blob => {
-                    // Create a download link
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = filename || 'download';
-                    document.body.appendChild(a);
-                    a.click();
+                    // Process the stream
+                    return new Promise((resolve, reject) => {
+                        function processStream() {
+                            reader.read().then(({done, value}) => {
+                                if (done) {
+                                    console.log('Download stream complete, preparing file');
+                                    
+                                    // Combine chunks into a single Blob
+                                    const blob = new Blob(chunks);
+                                    console.log(`Downloaded file size: ${blob.size} bytes`);
+                                    
+                                    try {
+                                        // Create a download link
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.style.display = 'none';
+                                        a.href = url;
+                                        a.download = filename;
+                                        document.body.appendChild(a);
+                                        
+                                        console.log('Triggering file download for:', filename);
+                                        a.click();
+                                        
+                                        // Clean up
+                                        setTimeout(() => {
+                                            document.body.removeChild(a);
+                                            window.URL.revokeObjectURL(url);
+                                            console.log('Download cleanup complete');
+                                        }, 100);
+                                        
+                                        if (progressCallback) {
+                                            progressCallback(100); // Ensure we end at 100%
+                                        }
+                                        
+                                        // Resolve the promise
+                                        resolve();
+                                    } catch (downloadError) {
+                                        console.error('Error during file download:', downloadError);
+                                        reject(new Error(`Download error: ${downloadError.message}`));
+                                    }
+                                    return;
+                                }
+                                
+                                // Store the chunk
+                                chunks.push(value);
+                                
+                                // Update progress
+                                if (progressCallback) {
+                                    loaded += value.length;
+                                    if (contentLength) {
+                                        const percentComplete = Math.min(
+                                            99, // Cap at 99% until fully complete
+                                            Math.round((loaded / parseInt(contentLength, 10)) * 100)
+                                        );
+                                        progressCallback(percentComplete);
+                                    } else {
+                                        // If content length is unknown, use chunk count as a proxy
+                                        // This isn't accurate but provides some feedback
+                                        progressCallback(Math.min(95, chunks.length * 5));
+                                    }
+                                }
+                                
+                                // Continue processing
+                                processStream();
+                            }).catch(streamError => {
+                                console.error('Error reading download stream:', streamError);
+                                reject(new Error(`Stream error: ${streamError.message}`));
+                            });
+                        }
+                        
+                        processStream();
+                    });
+                } else {
+                    console.warn('Response body stream not available, falling back to blob');
                     
-                    // Clean up
-                    setTimeout(() => {
-                        document.body.removeChild(a);
-                        window.URL.revokeObjectURL(url);
-                    }, 100);
-                })
-                .catch(handleError);
+                    // Fallback to blob if streaming isn't working
+                    return response.blob().then(blob => {
+                        console.log(`Downloaded file size: ${blob.size} bytes`);
+                        
+                        // Create a download link
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        
+                        // Clean up
+                        setTimeout(() => {
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                        }, 100);
+                        
+                        if (progressCallback) {
+                            progressCallback(100); // Complete the progress
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Download failed:', error);
+                
+                // Show user-friendly notification if available
+                if (TestGeneration.UIUtils && TestGeneration.UIUtils.showNotification) {
+                    TestGeneration.UIUtils.showNotification(
+                        `Download failed: ${error.message}`,
+                        'error'
+                    );
+                }
+                
+                throw error; // Re-throw for further handling
+            });
+        } else {
+            console.log('Stream API not supported or no progress callback, using basic fetch');
+            
+            // Fall back to regular post with blob response for browsers without stream support
+            return fetch(requestUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': '*/*',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(data),
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`Server error (${response.status}): ${text}`);
+                    });
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                console.log(`Downloaded file size: ${blob.size} bytes`);
+                
+                // Create a download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename || 'download';
+                document.body.appendChild(a);
+                a.click();
+                
+                // Clean up
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }, 100);
+                
+                // Show success notification
+                if (TestGeneration.UIUtils && TestGeneration.UIUtils.showNotification) {
+                    TestGeneration.UIUtils.showNotification(
+                        `File "${filename}" downloaded successfully.`,
+                        'success'
+                    );
+                }
+            })
+            .catch(error => {
+                console.error('Download failed:', error);
+                
+                // Show user-friendly notification if available
+                if (TestGeneration.UIUtils && TestGeneration.UIUtils.showNotification) {
+                    TestGeneration.UIUtils.showNotification(
+                        `Download failed: ${error.message}`,
+                        'error'
+                    );
+                }
+                
+                throw error; // Re-throw for further handling
+            });
         }
     }
-    
+        
     /**
      * Check the response status and handle errors
      * @param {Response} response - Fetch API response

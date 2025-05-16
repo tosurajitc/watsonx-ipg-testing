@@ -79,34 +79,50 @@ class TestCaseGenerator:
             self.logger.error(f"Failed to load template: {str(e)}")
             raise TemplateNotFoundError(f"Failed to load template: {str(e)}")
     
-    def validate_test_case_structure(self, test_case_df: pd.DataFrame) -> bool:
+    def validate_test_case_structure(self, test_case_df: pd.DataFrame) -> None:
         """
-        Validate that the generated test case DataFrame has the required structure.
+        Validate the structure of a generated test case.
         
         Args:
-            test_case_df (pd.DataFrame): The test case DataFrame to validate.
-            
-        Returns:
-            bool: True if valid, False otherwise.
+            test_case_df: The test case dataframe to validate
             
         Raises:
-            TestCaseGenerationError: If validation fails.
+            TestCaseGenerationError: If validation fails
         """
-        # Check if all required columns are present
-        missing_columns = [col for col in self.TEST_CASE_COLUMNS if col not in test_case_df.columns]
+        # Check that required columns exist
+        required_columns = ["TEST CASE NUMBER", "TEST CASE", "SUBJECT", 
+                        "STEP NO", "TEST STEP DESCRIPTION", "DATA", "EXPECTED RESULT"]
         
+        missing_columns = [col for col in required_columns if col not in test_case_df.columns]
         if missing_columns:
-            error_msg = f"Generated test case is missing required columns: {missing_columns}"
-            self.logger.error(error_msg)
-            raise TestCaseGenerationError(error_msg)
+            raise TestCaseGenerationError(f"Generated test case is missing required columns: {', '.join(missing_columns)}")
         
-        # Ensure there's at least one row of data
+        # Check that there is at least one step
         if len(test_case_df) == 0:
-            error_msg = "Generated test case has no data rows."
-            self.logger.error(error_msg)
-            raise TestCaseGenerationError(error_msg)
+            raise TestCaseGenerationError("Generated test case has no steps")
+        
+        # Check for empty required fields in each step
+        empty_fields_by_step = {}
+        
+        for idx, row in test_case_df.iterrows():
+            step_no = row.get("STEP NO", f"Step {idx+1}")
+            empty_fields = []
             
-        return True
+            for field in ["STEP NO", "TEST STEP DESCRIPTION", "DATA", "EXPECTED RESULT"]:
+                value = row.get(field, "")
+                if pd.isna(value) or str(value).strip() == "":
+                    empty_fields.append(field)
+            
+            if empty_fields:
+                empty_fields_by_step[step_no] = empty_fields
+        
+        if empty_fields_by_step:
+            error_msg = "Empty required fields detected:\n"
+            for step, fields in empty_fields_by_step.items():
+                error_msg += f"Step {step} is missing required fields: {', '.join(fields)}.\n"
+            error_msg += "Cannot generate a valid test case without these fields."
+            
+            raise TestCaseGenerationError(error_msg)
     
     def generate_test_case_from_scenario(self, scenario: Dict[str, Any]) -> pd.DataFrame:
         """
@@ -181,8 +197,6 @@ class TestCaseGenerator:
     
 
 
-
-    # Add this new method to the TestCaseGenerator class
     def generate_test_case_from_prompt(self, prompt: str) -> pd.DataFrame:
         """
         Generate a test case from a simple text prompt using LLM.
@@ -199,9 +213,28 @@ class TestCaseGenerator:
         try:
             self.logger.info(f"Generating test case from prompt: '{prompt}'")
             
+            # Enhance the prompt to explicitly require DATA field
+            enhanced_prompt = f"""
+            Generate a detailed test case based on this description: {prompt}
+            
+            IMPORTANT REQUIREMENTS:
+            - Include a DATA field for EVERY step
+            - DATA field must contain specific values, input data, URLs, etc.
+            - If a step doesn't require specific input data, use "N/A" in the DATA field
+            - NEVER leave the DATA field empty
+            
+            Your test case should include:
+            - Clear TEST CASE NUMBER and TEST CASE name
+            - SUBJECT and TYPE fields
+            - Sequential STEP NO for each step
+            - Detailed TEST STEP DESCRIPTION
+            - Specific DATA for each step (required)
+            - Clear EXPECTED RESULT for each step
+            """
+            
             # Use LLM helper to get test case structure
             llm_helper = LLMHelper()
-            test_case_data = llm_helper.generate_test_case_structure(prompt)
+            test_case_data = llm_helper.generate_test_case_structure(enhanced_prompt)
             
             # Extract steps from the structure
             steps = test_case_data.get("steps", [])
@@ -211,30 +244,41 @@ class TestCaseGenerator:
             # Create test case rows
             test_case_rows = []
             
-            # Add each step as a row
+            # Add each step as a row with required fields guaranteed
             for step in steps:
+                # Ensure DATA field exists and has a value
+                if "DATA" not in step or not step["DATA"]:
+                    step["DATA"] = "No specific data required"
+                    
                 row = {
-                    "SUBJECT": test_case_data.get("SUBJECT", ""),
-                    "TEST CASE": test_case_data.get("TEST CASE", ""),
-                    "TEST CASE NUMBER": test_case_data.get("TEST CASE NUMBER", ""),
+                    "SUBJECT": test_case_data.get("SUBJECT", "Functional Test"),
+                    "TEST CASE": test_case_data.get("TEST CASE", "Generated Test Case"),
+                    "TEST CASE NUMBER": test_case_data.get("TEST CASE NUMBER", f"TC-{uuid.uuid4().hex[:8]}"),
                     "STEP NO": step.get("STEP NO", ""),
                     "TEST STEP DESCRIPTION": step.get("TEST STEP DESCRIPTION", ""),
-                    "DATA": step.get("DATA", ""),
+                    "DATA": step.get("DATA", "No specific data required"),  # Default value for DATA
                     "REFERENCE VALUES": step.get("REFERENCE VALUES", ""),
                     "VALUES": step.get("VALUES", ""),
                     "EXPECTED RESULT": step.get("EXPECTED RESULT", ""),
                     "TRANS CODE": step.get("TRANS CODE", ""),
                     "TEST USER ID/ROLE": step.get("TEST USER ID/ROLE", ""),
                     "STATUS": step.get("STATUS", ""),
-                    "TYPE": test_case_data.get("TYPE", "")
+                    "TYPE": test_case_data.get("TYPE", "Manual")
                 }
                 test_case_rows.append(row)
             
             # Create DataFrame
             test_case_df = pd.DataFrame(test_case_rows)
             
-            # Validate the generated test case
-            self.validate_test_case_structure(test_case_df)
+            # Validate the generated test case with error correction
+            try:
+                self.validate_test_case_structure(test_case_df)
+            except Exception as validation_error:
+                self.logger.warning(f"Test case validation warning: {str(validation_error)}")
+                # Try to fix common validation issues
+                test_case_df = self._fix_test_case_structure(test_case_df)
+                # Validate again after fixes
+                self.validate_test_case_structure(test_case_df)
             
             self.logger.info(f"Successfully generated test case with {len(test_case_rows)} steps from prompt")
             return test_case_df

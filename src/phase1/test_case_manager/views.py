@@ -125,6 +125,9 @@ def test_generation_from_prompt(request):
             
             prompt = request_data['prompt']
             
+            # Log the received prompt
+            logger.info(f"Generating test case from prompt: {prompt[:100]}...")
+            
             # Generate test case
             generator = TestCaseGenerator()
             test_case_df = generator.generate_test_case_from_prompt(prompt)
@@ -132,20 +135,38 @@ def test_generation_from_prompt(request):
             # Convert DataFrame to dict for JSON response
             test_case_data = test_case_df.to_dict('records')
             
-            # Return success response
-            return JsonResponse({
+            logger.info(f"Successfully generated test case with {len(test_case_data)} steps")
+            
+            # Create a standardized scenario object from the prompt
+            scenario = {
+                "id": f"PROMPT-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                "name": prompt[:50] + ("..." if len(prompt) > 50 else ""),
+                "description": prompt,
+                "subject": "Test Generation",
+                "type": "Functional"
+            }
+            
+            # Return success response with consistent structure
+            # IMPORTANT: Keep this format consistent with what the frontend expects
+            response_data = {
                 "status": "success",
                 "message": "Test case generated successfully from prompt",
                 "data": {
                     "test_case": test_case_data,
+                    "scenario": scenario
                 }
-            })
+            }
+            
+            # Log the response structure (not the full content)
+            logger.info(f"Returning response with structure: {list(response_data.keys())}")
+            logger.info(f"Data keys: {list(response_data['data'].keys())}")
+            logger.info(f"Test case contains {len(test_case_data)} items")
+            
+            return JsonResponse(response_data)
             
         except Exception as e:
             # Log the error
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to generate test case from prompt: {str(e)}")
+            logger.exception(f"Failed to generate test case from prompt: {str(e)}")
             
             # Create user-friendly error response
             error_type = type(e).__name__
@@ -173,7 +194,7 @@ def test_generation_from_prompt(request):
                     "details": error_details,
                     "user_action": user_action
                 }
-            }, status=400)
+            }, status=500)  # Using 500 instead of 400 for server errors
     
     # If not POST request
     return JsonResponse({

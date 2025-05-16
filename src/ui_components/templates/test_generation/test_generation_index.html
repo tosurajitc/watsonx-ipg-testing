@@ -455,3 +455,102 @@
     window.addEventListener('load', fixRadioButtons);
   })();
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+  // Function to run after the page is fully loaded
+  window.addEventListener('load', function() {
+    // Create a force display button (for debugging purposes)
+    const debugDiv = document.createElement('div');
+    debugDiv.style.position = 'fixed';
+    debugDiv.style.bottom = '10px';
+    debugDiv.style.right = '10px';
+    debugDiv.style.zIndex = '9999';
+    
+    const debugBtn = document.createElement('button');
+    debugBtn.textContent = 'Force Display';
+    debugBtn.className = 'btn btn-sm btn-warning';
+    debugBtn.addEventListener('click', function() {
+      // Find output area and preview elements
+      const outputArea = document.getElementById('generationOutput');
+      const previewArea = document.getElementById('testCasePreview');
+      
+      console.log('Force display button clicked');
+      console.log('Output area found:', !!outputArea);
+      console.log('Preview area found:', !!previewArea);
+      
+      if (outputArea) {
+        outputArea.classList.remove('d-none');
+        outputArea.style.display = 'block';
+        outputArea.style.visibility = 'visible';
+        
+        // Display sample data if needed
+        if (previewArea) {
+          // Check if there's already content
+          if (previewArea.children.length === 0) {
+            previewArea.innerHTML = `
+              <div class="card bg-light mb-3">
+                <div class="card-body">
+                  <h5 class="card-title">Sample Test Case</h5>
+                  <div class="row">
+                    <div class="col-md-4"><strong>Test Case ID:</strong> FORCE-001</div>
+                    <div class="col-md-4"><strong>Subject:</strong> Authentication</div>
+                    <div class="col-md-4"><strong>Type:</strong> Functional</div>
+                  </div>
+                </div>
+              </div>
+              <table class="table table-bordered table-hover">
+                <thead>
+                  <tr>
+                    <th>Step #</th>
+                    <th>Description</th>
+                    <th>Test Data</th>
+                    <th>Expected Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>Navigate to login page</td>
+                    <td>https://example.com/login</td>
+                    <td>Login page is displayed correctly</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>Enter credentials</td>
+                    <td>Username: test, Password: test123</td>
+                    <td>Credentials accepted</td>
+                  </tr>
+                </tbody>
+              </table>
+            `;
+          }
+        }
+        
+        // Scroll to the output area
+        outputArea.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+    
+    debugDiv.appendChild(debugBtn);
+    document.body.appendChild(debugDiv);
+    
+    console.log('Debug button added to page');
+  });
+</script>

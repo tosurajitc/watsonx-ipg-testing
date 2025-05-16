@@ -520,13 +520,12 @@ TestGeneration.Generate = (function() {
         console.log('Generating test cases with data:', formData);
         
         // Determine which API endpoint to use based on source type
-        let apiEndpoint = '/test-cases/api/test-cases/generate/';
-        
+        let apiEndpoint = '/api/test-cases/generate';
         
         if (formData.sourceType === 'prompt') {
-            apiEndpoint = '/test-cases/api/test-cases/generate-from-prompt/';
+            apiEndpoint = '/api/test-cases/generate-from-prompt/';
         } else if (formData.sourceType === 'requirements' && formData.requirementIds && formData.requirementIds.length > 0) {
-            apiEndpoint = '/test-cases/api/test-cases/generate-batch/';
+            apiEndpoint = '/api/test-cases/generate-batch';
         }
 
         // Check if we should immediately download instead of previewing
@@ -536,17 +535,90 @@ TestGeneration.Generate = (function() {
             return;
         }
         
+        // CRITICAL FIX: Re-verify output elements exist and are visible
+        console.log('Verifying output elements before API call:');
+        console.log('- outputArea exists:', !!elements.outputArea);
+        console.log('- testCasePreview exists:', !!elements.testCasePreview);
+        
+        if (!elements.outputArea || !elements.testCasePreview) {
+            console.error('Output elements not available, re-caching DOM elements');
+            // Re-cache elements as they might have been changed
+            elements.outputArea = document.getElementById('generationOutput');
+            elements.testCasePreview = document.getElementById('testCasePreview');
+            
+            console.log('After re-caching:');
+            console.log('- outputArea exists:', !!elements.outputArea);
+            console.log('- testCasePreview exists:', !!elements.testCasePreview);
+        }
+        
         // Use the API service for backend calls
         if (TestGeneration.API) {
             TestGeneration.API.post(apiEndpoint, formData)
-                .then(handleGenerateResponse)
+                .then(function(response) {
+                    // CRITICAL FIX: Force display area to be visible
+                    if (elements.outputArea) {
+                        elements.outputArea.classList.remove('d-none');
+                        elements.outputArea.style.display = 'block';
+                        // Ensure no other CSS is hiding it
+                        elements.outputArea.style.visibility = 'visible';
+                        elements.outputArea.style.opacity = '1';
+                        elements.outputArea.style.height = 'auto';
+                        elements.outputArea.style.overflow = 'visible';
+                        
+                        // Scroll to the output area
+                        elements.outputArea.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    
+                    // Continue with normal handling
+                    handleGenerateResponse(response);
+                })
                 .catch(handleGenerateError);
         } else {
             console.error('API service not available');
             handleGenerateError(new Error('API service not available'));
         }
     }
+
+
+
+    function ensureTestCaseDisplay(maxAttempts = 5) {
+        // Check if output area is visible
+        if (elements.outputArea && 
+            (elements.outputArea.classList.contains('d-none') || 
+            elements.outputArea.style.display === 'none' ||
+            window.getComputedStyle(elements.outputArea).display === 'none')) {
+            
+            console.log('Output area still hidden after response, forcing display');
+            elements.outputArea.classList.remove('d-none');
+            elements.outputArea.style.display = 'block';
+            elements.outputArea.style.visibility = 'visible';
+            elements.outputArea.style.opacity = '1';
+            
+            // Check if test case preview is empty
+            if (elements.testCasePreview && 
+                elements.testCasePreview.children.length === 0 && 
+                generatedTestCaseData && 
+                maxAttempts > 0) {
+                
+                console.log('Test case preview empty, retrying display with generated data');
+                setTimeout(() => {
+                    try {
+                        TestGeneration.TestCaseDisplay.displayTestCase(generatedTestCaseData, elements.testCasePreview);
+                        // Scroll to the output area
+                        elements.outputArea.scrollIntoView({ behavior: 'smooth' });
+                    } catch (e) {
+                        console.error('Error during retry display:', e);
+                    }
+                    
+                    // Check again after a short delay with fewer attempts
+                    setTimeout(() => ensureTestCaseDisplay(maxAttempts - 1), 500);
+                }, 300);
+            }
+        }
+    }
+
     
+
     /**
      * Handle successful test case generation response
      * @param {Object} response - API response
@@ -556,85 +628,68 @@ TestGeneration.Generate = (function() {
         // Hide progress indicator
         hideProgressIndicator();
         
+        console.log('Received generation response:', response);
+        
         if (response.status === 'success') {
-            // Store the generated test case data
-            generatedTestCaseData = response.data;
-            
-            // Add console logs to see the data structure
-            console.log("Response from API:", response);
-            console.log("Response data type:", typeof response.data);
-            console.log("Response data:", response.data);
-            
-            // Adapt data format if needed
-            let displayData = response.data;
-            
-            // Check if data is missing the expected test_case property
-            if (displayData && !displayData.test_case) {
-                console.log("Data missing test_case property, adapting format");
-                
-                // If data is directly an array, wrap it in an object with test_case property
-                if (Array.isArray(displayData)) {
-                    displayData = { test_case: displayData };
-                    console.log("Adapted array data to:", displayData);
-                } 
-                // If data has a property that contains the test cases
-                else if (typeof displayData === 'object') {
-                    // Look for likely candidate properties that might contain test cases
-                    const candidateProps = ['results', 'test_cases', 'cases', 'data', 'steps'];
-                    
-                    for (const prop of candidateProps) {
-                        if (displayData[prop] && Array.isArray(displayData[prop])) {
-                            displayData = { test_case: displayData[prop] };
-                            console.log(`Found test case data in '${prop}' property, adapted to:`, displayData);
-                            break;
-                        }
-                    }
-                    
-                    // If we still don't have test_case, create an empty one to avoid errors
-                    if (!displayData.test_case) {
-                        console.warn("Could not find test case data in response, creating empty array");
-                        displayData = { test_case: [] };
-                    }
-                }
+            // Store the generated test case data with proper structure handling
+            if (response.data && response.data.test_case) {
+                // Direct structure with test_case at top level of data
+                generatedTestCaseData = response.data;
+                console.log('Using direct test_case structure from response.data');
+            } else if (response.data && response.data.data && response.data.data.test_case) {
+                // Nested structure with test_case inside data.data
+                generatedTestCaseData = response.data.data;
+                console.log('Using nested test_case structure from response.data.data');
+            } else {
+                // Fallback - store whatever we received
+                generatedTestCaseData = response.data;
+                console.log('Using fallback structure, no clear test_case found');
             }
+            
+            console.log('Processed test case data:', generatedTestCaseData);
             
             // Display test cases using the TestCaseDisplay module
             if (TestGeneration.TestCaseDisplay && elements.testCasePreview) {
-                // Show output area
-                if (elements.outputArea.classList.contains('d-none')) {
-                    elements.outputArea.classList.remove('d-none');
+                // Show output area first to ensure it's visible
+                if (elements.outputArea) {
+                    if (elements.outputArea.classList.contains('d-none')) {
+                        elements.outputArea.classList.remove('d-none');
+                    }
+                    elements.outputArea.style.display = 'block';
+                    console.log('Output area display style set to block');
+                } else {
+                    console.error('Output area element not found');
                 }
-                elements.outputArea.style.display = 'block';
                 
-                console.log("Calling displayTestCase with data:", displayData);
+                // Verify elements exist
+                console.log('Test case preview element exists:', !!elements.testCasePreview);
+                console.log('TestCaseDisplay module exists:', !!TestGeneration.TestCaseDisplay);
                 
-                // Display the test case using adapted data
-                TestGeneration.TestCaseDisplay.displayTestCase(displayData, elements.testCasePreview);
-                
-                // Debug check if anything was added to the preview container
-                console.log("Content after displayTestCase:", elements.testCasePreview.innerHTML);
-                
-                // Also check for any CSS issues that might be hiding the content
-                const computedStyle = window.getComputedStyle(elements.outputArea);
-                console.log("Output area display style:", computedStyle.display);
-                console.log("Output area visibility:", computedStyle.visibility);
-                console.log("Output area opacity:", computedStyle.opacity);
+                try {
+                    // Display the test case with the processed data
+                    const displayResult = TestGeneration.TestCaseDisplay.displayTestCase(generatedTestCaseData, elements.testCasePreview);
+                    console.log('Display function result:', displayResult);
+                    
+                    // NEW: Verify display after a short delay
+                    setTimeout(ensureTestCaseDisplay, 500);
+                } catch (displayError) {
+                    console.error('Error displaying test case:', displayError);
+                    elements.testCasePreview.innerHTML = `
+                        <div class="alert alert-danger">
+                            <h5>Error displaying test case</h5>
+                            <p>${displayError.message}</p>
+                            <p>Please check console for details.</p>
+                        </div>
+                    `;
+                }
             } else {
-                console.error('Display modules not available:', { 
+                console.error('Display components not available:', {
                     TestCaseDisplay: !!TestGeneration.TestCaseDisplay,
-                    testCasePreview: !!elements.testCasePreview
+                    previewElement: !!elements.testCasePreview
                 });
                 
-                // Try to get the preview element directly
-                const previewElement = document.getElementById('testCasePreview');
-                console.log("Direct DOM query for testCasePreview:", previewElement);
-                
-                if (previewElement) {
-                    previewElement.innerHTML = '<div class="alert alert-warning">Test case display module not available, but preview element found.</div>';
-                } else if (elements.testCasePreview) {
+                if (elements.testCasePreview) {
                     elements.testCasePreview.innerHTML = '<div class="alert alert-warning">Test case display module not available.</div>';
-                } else {
-                    console.error('Cannot find testCasePreview element to display error message');
                 }
             }
             
@@ -647,8 +702,13 @@ TestGeneration.Generate = (function() {
                     'Test cases generated successfully!',
                     'success'
                 );
+            } else {
+                console.log('Success: Test cases generated successfully!');
             }
         } else {
+            // Handle error response
+            console.error('Error response from API:', response);
+            
             // Show error notification
             if (TestGeneration.UIUtils && TestGeneration.UIUtils.showNotification) {
                 TestGeneration.UIUtils.showNotification(
@@ -657,6 +717,16 @@ TestGeneration.Generate = (function() {
                 );
             } else {
                 alert('Error generating test cases: ' + (response.message || 'Unknown error'));
+            }
+            
+            // Optionally show error details in the preview area
+            if (elements.testCasePreview) {
+                elements.testCasePreview.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5>Error Generating Test Cases</h5>
+                        <p>${response.message || 'Unknown error'}</p>
+                    </div>
+                `;
             }
         }
     }
@@ -1464,3 +1534,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('Generate Test Cases module loaded successfully');
+
+
+
