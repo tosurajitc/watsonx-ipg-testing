@@ -103,6 +103,7 @@ def test_generation_refine(request):
         logging.error(traceback.format_exc())
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
+@csrf_exempt
 @require_POST
 def test_generation_from_prompt(request):
     if request.method == 'POST':

@@ -520,13 +520,13 @@ TestGeneration.Generate = (function() {
         console.log('Generating test cases with data:', formData);
         
         // Determine which API endpoint to use based on source type
-        let apiEndpoint = '/api/test-cases/generate';
+        let apiEndpoint = '/test-cases/api/test-cases/generate/';
         
         
         if (formData.sourceType === 'prompt') {
-            apiEndpoint = '/api/test-cases/generate-from-prompt';
+            apiEndpoint = '/test-cases/api/test-cases/generate-from-prompt/';
         } else if (formData.sourceType === 'requirements' && formData.requirementIds && formData.requirementIds.length > 0) {
-            apiEndpoint = '/api/test-cases/generate-batch';
+            apiEndpoint = '/test-cases/api/test-cases/generate-batch/';
         }
 
         // Check if we should immediately download instead of previewing

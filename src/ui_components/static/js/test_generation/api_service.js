@@ -53,11 +53,20 @@ TestGeneration.API = (function() {
      * @returns {Promise} Promise resolving to the API response
      */
     function post(url, data, expectBlob = false) {
+        // Debug logging to trace execution flow
+        console.log('API.post called with URL:', url);
+        
         // Get CSRF token
         const csrfToken = TestGeneration.UIUtils ? TestGeneration.UIUtils.getCSRFToken() : '';
         
-        // Make the request
-        return fetch(BASE_URL + url, {
+        // Fix for absolute paths - this ensures URLs with leading slash work correctly
+        const requestUrl = url.startsWith('/') ? 
+            window.location.origin + url : BASE_URL + url;
+        
+        console.log('Making request to URL:', requestUrl);
+        
+        // Make the request - use requestUrl instead of BASE_URL + url
+        return fetch(requestUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -83,7 +92,6 @@ TestGeneration.API = (function() {
         })
         .catch(handleError);
     }
-    
     /**
      * Make a POST request with form data to the API (for file uploads)
      * @param {string} url - API endpoint URL

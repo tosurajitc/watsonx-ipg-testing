@@ -1,6 +1,6 @@
 python -m venv venv
 venv\Scripts\activate
-
+python manage.py runserver
 
 # Initialize Git if not already done
 git init
